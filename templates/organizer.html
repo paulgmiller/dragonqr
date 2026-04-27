@@ -1,0 +1,29 @@
+{{template "head" .}}
+<section class="hero compact">
+  <p class="eyebrow">Organizer</p>
+  <h1>{{.Quest.Title}}</h1>
+  <p>Edit quest text, clues, stats, and placement notes in <code>quest.yaml</code>, then restart the server.</p>
+</section>
+
+<nav class="actions">
+  <a class="button" href="/organizer/print">Printable QR Codes</a>
+</nav>
+
+<section class="panel">
+  <h2>Quest Codes</h2>
+  <div class="code-list">
+    {{range .Quest.Codes}}
+      <article class="code-row">
+        <div>
+          <strong>{{.Title}}</strong>
+          <span>{{.ID}} · {{.Type}}</span>
+          <p>{{.OrganizerNote}}</p>
+          {{if .Clue}}<p><b>Clue:</b> {{.Clue}}</p>{{end}}
+        </div>
+        <code>{{$.BaseURL}}/q/{{.ID}}</code>
+      </article>
+    {{end}}
+  </div>
+</section>
+{{template "foot" .}}
+

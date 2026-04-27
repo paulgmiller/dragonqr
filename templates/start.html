@@ -1,0 +1,25 @@
+{{template "head" .}}
+<section class="hero">
+  <p class="eyebrow">Start Quest</p>
+  <h1>{{.Quest.Title}}</h1>
+  <p>{{.Quest.Intro}}</p>
+</section>
+
+<section class="panel">
+  <h2>{{.Code.Title}}</h2>
+  <p>{{.Code.Description}}</p>
+  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  <form method="post" action="/start" class="form">
+    <label>
+      Your name
+      <input name="name" value="{{.Name}}" autocomplete="name" required maxlength="80">
+    </label>
+    <label>
+      Adventurer name
+      <input name="adventurer_name" value="{{.Adv}}" required maxlength="80" placeholder="Rowan Stormshield">
+    </label>
+    <button type="submit">Begin Adventure</button>
+  </form>
+</section>
+{{template "foot" .}}
+

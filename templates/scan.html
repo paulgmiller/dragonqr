@@ -1,0 +1,26 @@
+{{template "head" .}}
+<section class="hero compact">
+  <p class="eyebrow">{{.Result.Code.Label}}</p>
+  <h1>{{.Result.Title}}</h1>
+  <p>{{.Result.Body}}</p>
+</section>
+
+{{if .Result.Clue}}
+<section class="panel clue">
+  <h2>Clue</h2>
+  <p>{{.Result.Clue}}</p>
+</section>
+{{end}}
+
+<section class="stats">
+  <div><span>Health</span><strong>{{.Player.Health}}/{{.Player.MaxHealth}}</strong></div>
+  <div><span>Attack</span><strong>{{.Player.Attack}}</strong></div>
+  <div><span>Armor</span><strong>{{.Player.Armor}}</strong></div>
+  <div><span>Found</span><strong>{{len .Player.Scanned}}</strong></div>
+</section>
+
+<nav class="actions">
+  <a class="button" href="/status">View Status</a>
+</nav>
+{{template "foot" .}}
+

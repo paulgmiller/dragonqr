@@ -1,0 +1,153 @@
+title: "Dragon of Ember Hollow"
+intro: "A dragon has curled around Ember Hollow's old watchtower. Gather courage, friends, and enchanted gear before facing it."
+start_code: start
+dragon_code: ember-dragon
+base_health: 10
+base_attack: 2
+base_armor: 0
+dragon_requirements:
+  min_attack: 7
+  min_armor: 3
+  min_companions: 1
+  defeated:
+    - cave-bat
+    - bridge-troll
+    - ash-wolf
+victory_text: "The dragon lowers its head, beaten but alive, and promises to guard Ember Hollow instead of frightening it."
+codes:
+  - id: start
+    type: start
+    title: "The Adventurer's Oath"
+    label: "Start Here"
+    description: "Choose your adventurer name and begin the quest."
+    clue: "Seek the glimmer where old stories are kept."
+    organizer_note: "Place this at the entrance or check-in table."
+
+  - id: silver-sword
+    type: weapon
+    title: "Silverleaf Sword"
+    label: "Weapon"
+    description: "A bright blade hums in your hand."
+    clue: "The next danger waits where shadows hang upside down."
+    organizer_note: "Hide near books, shelves, or a story area."
+    effects:
+      attack: 3
+
+  - id: cave-bat
+    type: enemy
+    title: "Cave Bat Swarm"
+    label: "Enemy"
+    description: "A cloud of squeaking bats swoops from the dark."
+    clue: "Look where water would cross if this were a tiny kingdom."
+    organizer_note: "Place somewhere dim or under a table."
+    enemy:
+      health: 6
+      attack: 2
+      armor: 0
+    rewards:
+      health: 2
+
+  - id: oak-shield
+    type: armor
+    title: "Oakguard Shield"
+    label: "Armor"
+    description: "The shield is light, sturdy, and warm as summer bark."
+    clue: "A helper waits where soft things rest."
+    organizer_note: "Place near a bridge-like spot or doorway."
+    effects:
+      armor: 2
+
+  - id: pixie-companion
+    type: companion
+    title: "Mira the Lantern Pixie"
+    label: "Companion"
+    description: "Mira promises to sparkle fiercely beside you."
+    clue: "The old bridge keeper guards the way forward."
+    organizer_note: "Place near pillows, blankets, or a couch."
+    effects:
+      attack: 1
+      health: 1
+
+  - id: bridge-troll
+    type: enemy
+    title: "Grumblebridge Troll"
+    label: "Enemy"
+    description: "A grumpy troll stamps its feet and demands a duel."
+    clue: "Search where something warm might be brewed."
+    organizer_note: "Place near stairs, a hallway, or a threshold."
+    enemy:
+      health: 9
+      attack: 3
+      armor: 1
+    rewards:
+      attack: 1
+      health: 2
+
+  - id: healing-potion
+    type: healing
+    title: "Rubyberry Potion"
+    label: "Healing"
+    description: "The potion tastes like berries and bravery."
+    clue: "The wolf of ash prowls near something that opens and closes."
+    organizer_note: "Place near a kitchen or snack table."
+    effects:
+      health: 5
+
+  - id: ash-wolf
+    type: enemy
+    title: "Ash-Furred Wolf"
+    label: "Enemy"
+    description: "The wolf's paws leave tiny sparks as it circles."
+    clue: "Seek the helm where coats or cloaks sleep."
+    organizer_note: "Place near a door, cabinet, or gate."
+    enemy:
+      health: 10
+      attack: 4
+      armor: 1
+    rewards:
+      armor: 1
+
+  - id: star-helm
+    type: armor
+    title: "Starforged Helm"
+    label: "Armor"
+    description: "Starlight flashes across the helm when you put it on."
+    clue: "A forgotten map waits where people make plans."
+    organizer_note: "Place near coats, hats, or dress-up clothes."
+    effects:
+      armor: 1
+      health: 1
+
+  - id: map-clue
+    type: clue
+    title: "Map of Ember Hollow"
+    label: "Clue"
+    description: "The map shows a secret path around the dragon's smoke."
+    clue: "The final ally waits where music, games, or celebration begins."
+    organizer_note: "Place near a table or desk."
+    effects:
+      attack: 1
+
+  - id: knight-companion
+    type: companion
+    title: "Sir Button the Brave"
+    label: "Companion"
+    description: "A tiny knight salutes and joins your quest."
+    clue: "When you feel ready, find the dragon in its tower."
+    organizer_note: "Place near party supplies, music, or games."
+    effects:
+      attack: 1
+      armor: 1
+
+  - id: ember-dragon
+    type: dragon
+    title: "The Ember Dragon"
+    label: "Final Dragon"
+    description: "The great dragon spreads its wings over Ember Hollow."
+    clue: "This is the final battle."
+    organizer_note: "Place at the final destination."
+    enemy:
+      health: 18
+      attack: 5
+      armor: 2
+

@@ -1,0 +1,50 @@
+{{template "head" .}}
+<section class="hero compact">
+  <p class="eyebrow">Quest Status</p>
+  <h1>{{.Player.AdventurerName}}</h1>
+  <p>{{.Quest.Title}}</p>
+</section>
+
+{{if .Message}}<p class="notice">{{.Message}}</p>{{end}}
+
+<section class="stats">
+  <div><span>Health</span><strong>{{.Player.Health}}/{{.Player.MaxHealth}}</strong></div>
+  <div><span>Attack</span><strong>{{.Player.Attack}}</strong></div>
+  <div><span>Armor</span><strong>{{.Player.Armor}}</strong></div>
+  <div><span>Companions</span><strong>{{len .Player.Companions}}</strong></div>
+</section>
+
+<section class="panel">
+  <h2>Dragon Readiness</h2>
+  {{if .Player.DragonDefeated}}
+    <p class="success">{{.Quest.VictoryText}}</p>
+  {{else if .Ready}}
+    <p class="success">You are ready to face the dragon when you find its QR code.</p>
+  {{else}}
+    <p>Not ready yet: {{.Missing}}.</p>
+  {{end}}
+</section>
+
+<section class="grid">
+  <article class="panel">
+    <h2>Gear</h2>
+    {{if .Player.Items}}
+      <ul>{{range .Player.Items}}<li>{{.}}</li>{{end}}</ul>
+    {{else}}<p>No gear yet.</p>{{end}}
+  </article>
+  <article class="panel">
+    <h2>Companions</h2>
+    {{if .Player.Companions}}
+      <ul>{{range .Player.Companions}}<li>{{.}}</li>{{end}}</ul>
+    {{else}}<p>No companions yet.</p>{{end}}
+  </article>
+</section>
+
+<section class="panel">
+  <h2>Clues</h2>
+  {{if .Player.Clues}}
+    <ol>{{range .Player.Clues}}<li>{{.Text}}</li>{{end}}</ol>
+  {{else}}<p>No clues yet.</p>{{end}}
+</section>
+{{template "foot" .}}
+

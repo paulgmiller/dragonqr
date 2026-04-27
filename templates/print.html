@@ -1,0 +1,19 @@
+{{template "head" .}}
+<section class="print-title">
+  <h1>{{.Quest.Title}} QR Codes</h1>
+  <p>Cut out each code and place it using the organizer note.</p>
+</section>
+
+<section class="print-grid">
+  {{range .Codes}}
+    <article class="qr-card">
+      <img src="{{.QR}}" alt="QR code for {{.Title}}">
+      <h2>{{.Title}}</h2>
+      <p>{{.Label}} · {{.ID}}</p>
+      <p>{{.OrganizerNote}}</p>
+      <small>{{.URL}}</small>
+    </article>
+  {{end}}
+</section>
+{{template "foot" .}}
+
