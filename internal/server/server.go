@@ -54,6 +54,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /status", s.handleStatus)
 	mux.HandleFunc("GET /q/{id}", s.handleCode)
 	mux.HandleFunc("POST /start", s.handleStart)
+	mux.HandleFunc("POST /restart", s.handleRestart)
 	mux.HandleFunc("POST /combat/roll", s.handleCombatRoll)
 	mux.HandleFunc("GET /organizer", s.withOrganizerAuth(s.handleOrganizer))
 	mux.HandleFunc("GET /organizer/print", s.withOrganizerAuth(s.handlePrint))
@@ -208,16 +209,19 @@ func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
 	}
 	name := strings.TrimSpace(r.FormValue("name"))
 	adventurerName := strings.TrimSpace(r.FormValue("adventurer_name"))
-	if name == "" || adventurerName == "" {
-		slog.Info("start form rejected", "missing_name", name == "", "missing_adventurer_name", adventurerName == "")
+	if adventurerName == "" {
+		slog.Info("start form rejected", "missing_adventurer_name", true)
 		s.render(w, "start.html", map[string]any{
 			"Quest": s.quest,
 			"Code":  s.quest.Start(),
-			"Error": "Both names are required.",
+			"Error": "Adventurer name is required.",
 			"Name":  name,
 			"Adv":   adventurerName,
 		})
 		return
+	}
+	if name == "" {
+		name = adventurerName
 	}
 	p, err := s.store.Create(s.quest, name, adventurerName)
 	if err != nil {
@@ -242,6 +246,22 @@ func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/status", http.StatusSeeOther)
 }
 
+func (s *Server) handleRestart(w http.ResponseWriter, r *http.Request) {
+	if p, ok := s.currentPlayer(r); ok {
+		slog.Info("player restart requested", "player_id", p.ID)
+	} else {
+		slog.Info("player restart requested without active player")
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     "dragonqr_player",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		SameSite: http.SameSiteLaxMode,
+	})
+	http.Redirect(w, r, "/q/"+url.PathEscape(s.quest.StartCode), http.StatusSeeOther)
+}
+
 func (s *Server) handleOrganizer(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "organizer.html", s.organizerView(r, "", ""))
 }
@@ -249,9 +269,8 @@ func (s *Server) handleOrganizer(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handlePrint(w http.ResponseWriter, r *http.Request) {
 	type printableCode struct {
 		game.Code
-		URL      string
-		QR       template.URL
-		ImageURL string
+		URL string
+		QR  template.URL
 	}
 	var codes []printableCode
 	for _, code := range s.quest.Codes {
@@ -262,7 +281,7 @@ func (s *Server) handlePrint(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Could not generate QR code.", http.StatusInternalServerError)
 			return
 		}
-		codes = append(codes, printableCode{Code: code, URL: u, QR: qr, ImageURL: s.codeImageURL(code)})
+		codes = append(codes, printableCode{Code: code, URL: u, QR: qr})
 	}
 	s.render(w, "print.html", map[string]any{
 		"Quest": s.quest,
@@ -368,7 +387,7 @@ func (s *Server) baseURL(r *http.Request) string {
 }
 
 func qrDataURL(value string) (template.URL, error) {
-	img, err := qrcode.New(value, qrcode.Medium)
+	img, err := qrcode.New(value, qrcode.Highest)
 	if err != nil {
 		return "", err
 	}

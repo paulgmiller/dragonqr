@@ -22,7 +22,7 @@
       <article class="code-row">
         <div class="code-art">
           {{if .ImageURL}}
-            <img src="{{.ImageURL}}" alt="">
+            <img src="{{.ImageURL}}" alt="" width="92" height="92" loading="lazy" decoding="async" style="width:92px;height:92px;max-width:92px;max-height:92px;object-fit:cover;display:block;">
           {{else}}
             <span>No image</span>
           {{end}}

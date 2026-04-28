@@ -29,7 +29,7 @@ go test ./...
 1. Edit `quest.yaml` if you want to change the story, clues, stats, or QR code locations.
 2. Start the server with a base URL that phones can reach.
 3. Open `/organizer`.
-4. Generate missing station images if you want art on the printable cards.
+4. Generate missing station images if you want art on scan and combat pages.
 5. Open `/organizer/print`.
 6. Print and cut out the reusable QR cards.
 7. Place each QR card using the organizer note matched by stable ID.
@@ -60,8 +60,7 @@ When prompted, use:
 
 Players should scan the start QR code first. They will:
 
-1. Enter their name.
-2. Choose an adventurer name.
+1. Choose an adventurer name.
 3. Scan QR codes around the play area.
 4. Collect gear, companions, healing, and clues.
 5. Fight smaller enemies.
@@ -69,6 +68,8 @@ Players should scan the start QR code first. They will:
 7. Scan the dragon QR code when they are ready.
 
 Progress is remembered with a browser cookie. A player should keep using the same phone/browser during the event.
+
+Players can use "Start Again" on the status page to clear the current browser cookie and create a new adventurer on the same device.
 
 If a player scans a power-up twice, it only counts once. Enemies also cannot be farmed repeatedly for extra rewards.
 
@@ -133,7 +134,7 @@ Example enemy:
     health: 2
 ```
 
-The printed cards show stable IDs instead of story titles or raw URLs, so you can change titles, descriptions, clues, organizer notes, and generated art while keeping the same printed cards. Reprint only when a code `id` or `-base-url` changes.
+The printed cards show stable IDs and QR codes only, so you can change titles, descriptions, clues, organizer notes, and generated art while keeping the same printed cards. Reprint only when a code `id` or `-base-url` changes. The QR codes use the highest error recovery level supported by the QR library for better outdoor durability.
 
 ## Station Images
 
@@ -143,7 +144,7 @@ The organizer page can generate one local WebP image for each station. Set `OPEN
 OPENAI_API_KEY=sk-... go run ./cmd/dragonqr -addr 127.0.0.1:8097 -base-url http://127.0.0.1:8097
 ```
 
-Then open `/organizer` and use "Generate Missing Images" or the per-code buttons. Existing image files are not overwritten. Images are saved under:
+Then open `/organizer` and use "Generate Missing Images" or the per-code buttons. Existing image files are not overwritten. Images are shown on scan/combat pages and in organizer thumbnails, but not on printable QR cards. Images are saved under:
 
 ```text
 static/generated/stations/{code-id}.webp

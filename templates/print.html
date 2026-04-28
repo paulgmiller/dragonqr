@@ -7,7 +7,6 @@
 <section class="print-grid">
   {{range .Codes}}
     <article class="qr-card">
-      {{if .ImageURL}}<img class="station-image" src="{{.ImageURL}}" alt="">{{end}}
       <img class="qr-image" src="{{.QR}}" alt="QR code for {{.ID}}">
       <h2>{{.ID}}</h2>
     </article>

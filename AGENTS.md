@@ -17,7 +17,9 @@ The app renders server-side HTML with Go `html/template`. There is no frontend b
 ## Runtime Behavior
 
 - Players start at `/q/start`, create an adventurer, then scan `/q/{codeID}` URLs.
+- Starting a player only requires `adventurer_name`; the real-name field was intentionally removed from the UI.
 - Player identity is a browser cookie named `dragonqr_player`.
+- `POST /restart` clears only the current browser cookie and redirects back to the start code. It does not delete saved player records.
 - Player progress is stored in `data/players.json`.
 - Organizer pages:
   - `/organizer`
@@ -29,7 +31,7 @@ The app renders server-side HTML with Go `html/template`. There is no frontend b
   - `POST /organizer/images/generate/{id}`
 - Organizer auth uses HTTP Basic auth when `ORGANIZER_PASSWORD` is set. Username is `organizer`.
 - QR images on the print page are generated as PNG data URLs. Keep them typed as `template.URL`; plain strings are sanitized to `#ZgotmplZ`.
-- Printable cards are intentionally reusable: they should show stable IDs, QR codes, and optional station art, but not story titles, placement notes, or visible raw URLs.
+- Printable cards are intentionally reusable: they should show only stable IDs and QR codes, not station art, story titles, placement notes, or visible raw URLs.
 - QR payloads still point at `/q/{codeID}`; changing a code `id` or `DRAGONQR_BASE_URL` still requires reprinting.
 - Player progress should be durable across title/description changes. Store and compare stable code IDs where possible; render current display names from `quest.yaml`.
 - Existing player JSON may contain older title-backed `items` or `companions`. Keep compatibility when changing player display logic.

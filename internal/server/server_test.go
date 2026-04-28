@@ -1,6 +1,11 @@
 package server
 
 import (
+	"bytes"
+	"encoding/base64"
+	"image"
+	"image/color"
+	"image/png"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -9,12 +14,13 @@ import (
 	"testing"
 
 	"dragonqr/internal/game"
+
+	"github.com/skip2/go-qrcode"
 )
 
 func TestStartCreatesPlayerAndSetsCookie(t *testing.T) {
 	app := testServer(t, "")
 	form := url.Values{
-		"name":            {"Pat"},
 		"adventurer_name": {"Star Pat"},
 	}
 	req := httptest.NewRequest(http.MethodPost, "/start", strings.NewReader(form.Encode()))
@@ -28,6 +34,59 @@ func TestStartCreatesPlayerAndSetsCookie(t *testing.T) {
 	}
 	if len(rr.Result().Cookies()) == 0 {
 		t.Fatal("expected player cookie")
+	}
+}
+
+func TestStartRequiresOnlyAdventurerName(t *testing.T) {
+	app := testServer(t, "")
+	form := url.Values{
+		"name": {"Pat"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "/start", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+
+	app.Handler().ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	if !strings.Contains(rr.Body.String(), "Adventurer name is required.") {
+		t.Fatal("expected adventurer name validation error")
+	}
+}
+
+func TestRestartClearsPlayerCookie(t *testing.T) {
+	app := testServer(t, "")
+	form := url.Values{"adventurer_name": {"Star Pat"}}
+	startReq := httptest.NewRequest(http.MethodPost, "/start", strings.NewReader(form.Encode()))
+	startReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	startRR := httptest.NewRecorder()
+	app.Handler().ServeHTTP(startRR, startReq)
+	cookies := startRR.Result().Cookies()
+	if len(cookies) == 0 {
+		t.Fatal("expected player cookie from start")
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/restart", nil)
+	req.AddCookie(cookies[0])
+	rr := httptest.NewRecorder()
+	app.Handler().ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusSeeOther {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusSeeOther)
+	}
+	cleared := false
+	for _, cookie := range rr.Result().Cookies() {
+		if cookie.Name == "dragonqr_player" && cookie.MaxAge < 0 {
+			cleared = true
+		}
+	}
+	if !cleared {
+		t.Fatal("restart did not clear player cookie")
+	}
+	if got := rr.Header().Get("Location"); got != "/q/start" {
+		t.Fatalf("Location = %q, want /q/start", got)
 	}
 }
 
@@ -115,8 +174,37 @@ func TestPrintPageIncludesGeneratedStationImage(t *testing.T) {
 
 	app.Handler().ServeHTTP(rr, req)
 
-	if !strings.Contains(rr.Body.String(), `/static/generated/stations/sword.webp`) {
-		t.Fatal("print page did not include generated station image")
+	if strings.Contains(rr.Body.String(), `/static/generated/stations/sword.webp`) {
+		t.Fatal("print page included generated station image; QR cards must stay reusable")
+	}
+}
+
+func TestQRDataURLUsesHighestRecoveryLevel(t *testing.T) {
+	qr, err := qrDataURL("http://example.test/q/outdoor-damage")
+	if err != nil {
+		t.Fatal(err)
+	}
+	const prefix = "data:image/png;base64,"
+	encoded := strings.TrimPrefix(string(qr), prefix)
+	if encoded == string(qr) {
+		t.Fatal("qr data URL is missing PNG base64 prefix")
+	}
+	raw, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := png.Decode(bytes.NewReader(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected, err := qrcode.New("http://example.test/q/outdoor-damage", qrcode.Highest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := expected.Image(256)
+	if !sameImage(got, want) {
+		t.Fatal("qrDataURL did not match qrcode.Highest output")
 	}
 }
 
@@ -150,4 +238,18 @@ func testServer(t *testing.T, password string) *Server {
 		t.Fatal(err)
 	}
 	return app
+}
+
+func sameImage(a image.Image, b image.Image) bool {
+	if a.Bounds() != b.Bounds() {
+		return false
+	}
+	for y := a.Bounds().Min.Y; y < a.Bounds().Max.Y; y++ {
+		for x := a.Bounds().Min.X; x < a.Bounds().Max.X; x++ {
+			if color.NRGBAModel.Convert(a.At(x, y)) != color.NRGBAModel.Convert(b.At(x, y)) {
+				return false
+			}
+		}
+	}
+	return true
 }

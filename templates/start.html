@@ -11,10 +11,6 @@
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
   <form method="post" action="/start" class="form">
     <label>
-      Your name
-      <input name="name" value="{{.Name}}" autocomplete="name" required maxlength="80">
-    </label>
-    <label>
       Adventurer name
       <input name="adventurer_name" value="{{.Adv}}" required maxlength="80" placeholder="Rowan Stormshield">
     </label>
@@ -22,4 +18,3 @@
   </form>
 </section>
 {{template "foot" .}}
-
