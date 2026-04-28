@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"image/png"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -86,14 +87,17 @@ func (s *Server) handleCode(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	code, ok := s.quest.Code(id)
 	if !ok {
+		slog.Warn("unknown code scanned", "code_id", id)
 		http.NotFound(w, r)
 		return
 	}
 	if code.Type == game.CodeStart {
 		if p, ok := s.currentPlayer(r); ok {
+			slog.Info("start code scanned by existing player", "player_id", p.ID, "code_id", code.ID)
 			s.render(w, "status.html", s.statusView(r, p, "Your adventure is already started."))
 			return
 		}
+		slog.Info("start code scanned", "code_id", code.ID)
 		s.render(w, "start.html", map[string]any{
 			"Quest": s.quest,
 			"Code":  code,
@@ -103,6 +107,7 @@ func (s *Server) handleCode(w http.ResponseWriter, r *http.Request) {
 
 	p, ok := s.currentPlayer(r)
 	if !ok {
+		slog.Info("code scan without player", "code_id", code.ID, "code_type", code.Type)
 		http.Redirect(w, r, "/q/"+url.PathEscape(s.quest.StartCode), http.StatusSeeOther)
 		return
 	}
@@ -113,10 +118,24 @@ func (s *Server) handleCode(w http.ResponseWriter, r *http.Request) {
 		return nil
 	})
 	if err != nil {
+		slog.Error("failed to save scan progress", "error", err, "player_id", p.ID, "code_id", code.ID)
 		http.Error(w, "Could not save quest progress.", http.StatusInternalServerError)
 		return
 	}
 	result.Player = p
+	slog.Info("code scanned",
+		"player_id", p.ID,
+		"code_id", code.ID,
+		"code_type", code.Type,
+		"already_seen", result.AlreadySeen,
+		"blocked", result.Blocked,
+		"combat_active", result.Combat != nil,
+		"victory", result.Victory,
+		"health", p.Health,
+		"max_health", p.MaxHealth,
+		"attack", p.Attack,
+		"armor", p.Armor,
+	)
 	if result.Combat != nil {
 		result.Combat = p.Combat
 		s.render(w, "combat.html", s.combatView(r, result))
@@ -128,6 +147,7 @@ func (s *Server) handleCode(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleCombatRoll(w http.ResponseWriter, r *http.Request) {
 	p, ok := s.currentPlayer(r)
 	if !ok {
+		slog.Info("combat roll without player")
 		http.Redirect(w, r, "/q/"+url.PathEscape(s.quest.StartCode), http.StatusSeeOther)
 		return
 	}
@@ -139,14 +159,39 @@ func (s *Server) handleCombatRoll(w http.ResponseWriter, r *http.Request) {
 		return rollErr
 	})
 	if errors.Is(err, game.ErrNoActiveCombat) {
+		slog.Info("combat roll without active combat", "player_id", p.ID)
 		http.Redirect(w, r, "/status", http.StatusSeeOther)
 		return
 	}
 	if err != nil {
+		slog.Error("failed to save combat progress", "error", err, "player_id", p.ID)
 		http.Error(w, "Could not save combat progress.", http.StatusInternalServerError)
 		return
 	}
 	result.Player = p
+	attrs := []any{
+		"player_id", p.ID,
+		"code_id", result.Code.ID,
+		"code_type", result.Code.Type,
+		"combat_active", result.Combat != nil,
+		"blocked", result.Blocked,
+		"defeated", result.Defeated,
+		"victory", result.Victory,
+		"health", p.Health,
+		"max_health", p.MaxHealth,
+	}
+	if result.Combat != nil {
+		attrs = append(attrs, "enemy_health", result.Combat.EnemyHealth, "rounds", len(result.Combat.Rounds))
+	}
+	if result.LastRound != nil {
+		attrs = append(attrs,
+			"player_roll", result.LastRound.PlayerRoll,
+			"enemy_roll", result.LastRound.EnemyRoll,
+			"player_damage", result.LastRound.PlayerDamage,
+			"enemy_damage", result.LastRound.EnemyDamage,
+		)
+	}
+	slog.Info("combat rolled", attrs...)
 	if result.Combat != nil {
 		result.Combat = p.Combat
 		s.render(w, "combat.html", s.combatView(r, result))
@@ -157,12 +202,14 @@ func (s *Server) handleCombatRoll(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
+		slog.Warn("bad start form", "error", err)
 		http.Error(w, "Bad form.", http.StatusBadRequest)
 		return
 	}
 	name := strings.TrimSpace(r.FormValue("name"))
 	adventurerName := strings.TrimSpace(r.FormValue("adventurer_name"))
 	if name == "" || adventurerName == "" {
+		slog.Info("start form rejected", "missing_name", name == "", "missing_adventurer_name", adventurerName == "")
 		s.render(w, "start.html", map[string]any{
 			"Quest": s.quest,
 			"Code":  s.quest.Start(),
@@ -174,9 +221,17 @@ func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
 	}
 	p, err := s.store.Create(s.quest, name, adventurerName)
 	if err != nil {
+		slog.Error("failed to create player", "error", err)
 		http.Error(w, "Could not create player.", http.StatusInternalServerError)
 		return
 	}
+	slog.Info("player created",
+		"player_id", p.ID,
+		"max_health", p.MaxHealth,
+		"health", p.Health,
+		"attack", p.Attack,
+		"armor", p.Armor,
+	)
 	http.SetCookie(w, &http.Cookie{
 		Name:     "dragonqr_player",
 		Value:    p.ID,
@@ -203,6 +258,7 @@ func (s *Server) handlePrint(w http.ResponseWriter, r *http.Request) {
 		u := s.codeURL(r, code.ID)
 		qr, err := qrDataURL(u)
 		if err != nil {
+			slog.Error("failed to generate qr code", "error", err, "code_id", code.ID)
 			http.Error(w, "Could not generate QR code.", http.StatusInternalServerError)
 			return
 		}
@@ -268,6 +324,7 @@ func (s *Server) withOrganizerAuth(next http.HandlerFunc) http.HandlerFunc {
 		}
 		user, pass, ok := r.BasicAuth()
 		if !ok || user != "organizer" || pass != s.cfg.OrganizerPassword {
+			slog.Warn("organizer auth failed", "path", r.URL.Path, "has_credentials", ok)
 			w.Header().Set("WWW-Authenticate", `Basic realm="Dragon QR Organizer"`)
 			http.Error(w, "Organizer password required.", http.StatusUnauthorized)
 			return
@@ -279,6 +336,7 @@ func (s *Server) withOrganizerAuth(next http.HandlerFunc) http.HandlerFunc {
 func (s *Server) render(w http.ResponseWriter, name string, data any) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := s.tpl.ExecuteTemplate(w, name, data); err != nil {
+		slog.Error("template render failed", "error", err, "template", name)
 		http.Error(w, "Template error.", http.StatusInternalServerError)
 	}
 }

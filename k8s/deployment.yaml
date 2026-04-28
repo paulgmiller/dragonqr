@@ -23,7 +23,7 @@ spec:
       containers:
         - name: dragonqr
           image: paulgmiller/dragonqr:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           args:
             - "-addr"
             - "0.0.0.0:8080"

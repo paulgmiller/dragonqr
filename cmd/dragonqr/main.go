@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -65,14 +66,26 @@ func run() error {
 	defer stop()
 	go func() {
 		<-ctx.Done()
+		slog.Info("shutdown requested")
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		_ = srv.Shutdown(shutdownCtx)
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			slog.Error("server shutdown failed", "error", err)
+		}
 	}()
 
-	fmt.Printf("Dragon QR listening on %s\n", listenerURL(addr))
+	slog.Info("dragonqr listening",
+		"addr", addr,
+		"url", listenerURL(addr),
+		"quest", questPath,
+		"data", dataPath,
+		"base_url_configured", baseURL != "",
+		"organizer_auth_enabled", os.Getenv("ORGANIZER_PASSWORD") != "",
+		"image_generation_enabled", os.Getenv("OPENAI_API_KEY") != "",
+	)
 	err = srv.ListenAndServe()
 	if errors.Is(err, http.ErrServerClosed) {
+		slog.Info("server stopped")
 		return nil
 	}
 	return err

@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"dragonqr/internal/game"
 
@@ -27,11 +29,14 @@ type organizerCode struct {
 }
 
 func (s *Server) handleGenerateMissingImages(w http.ResponseWriter, r *http.Request) {
+	slog.Info("station image generation requested", "scope", "missing")
 	count, err := s.generateMissingImages(r.Context())
 	if err != nil {
+		slog.Error("station image generation failed", "error", err, "generated_count", count)
 		s.render(w, "organizer.html", s.organizerView(r, "", err.Error()))
 		return
 	}
+	slog.Info("station image generation completed", "scope", "missing", "generated_count", count)
 	s.render(w, "organizer.html", s.organizerView(r, fmt.Sprintf("Generated %d missing station images.", count), ""))
 }
 
@@ -39,17 +44,22 @@ func (s *Server) handleGenerateCodeImage(w http.ResponseWriter, r *http.Request)
 	id := r.PathValue("id")
 	code, ok := s.quest.Code(id)
 	if !ok {
+		slog.Warn("station image generation requested for unknown code", "code_id", id)
 		http.NotFound(w, r)
 		return
 	}
+	slog.Info("station image generation requested", "scope", "single", "code_id", code.ID, "code_type", code.Type)
 	if s.codeImageExists(code) {
+		slog.Info("station image generation skipped; image already exists", "code_id", code.ID)
 		s.render(w, "organizer.html", s.organizerView(r, "That station already has an image.", ""))
 		return
 	}
 	if err := s.generateCodeImage(r.Context(), code); err != nil {
+		slog.Error("station image generation failed", "error", err, "code_id", code.ID)
 		s.render(w, "organizer.html", s.organizerView(r, "", err.Error()))
 		return
 	}
+	slog.Info("station image generation completed", "scope", "single", "code_id", code.ID)
 	s.render(w, "organizer.html", s.organizerView(r, fmt.Sprintf("Generated image for %s.", code.ID), ""))
 }
 
@@ -57,6 +67,7 @@ func (s *Server) generateMissingImages(ctx context.Context) (int, error) {
 	count := 0
 	for _, code := range s.quest.Codes {
 		if s.codeImageExists(code) {
+			slog.Info("station image generation skipped; image already exists", "code_id", code.ID)
 			continue
 		}
 		if err := s.generateCodeImage(ctx, code); err != nil {
@@ -69,6 +80,7 @@ func (s *Server) generateMissingImages(ctx context.Context) (int, error) {
 
 func (s *Server) generateCodeImage(ctx context.Context, code game.Code) error {
 	if strings.TrimSpace(s.cfg.OpenAIAPIKey) == "" {
+		slog.Warn("station image generation skipped; missing OpenAI API key", "code_id", code.ID)
 		return fmt.Errorf("OPENAI_API_KEY is required to generate images")
 	}
 	imagePath, err := s.codeImagePath(code)
@@ -79,9 +91,21 @@ func (s *Server) generateCodeImage(ctx context.Context, code game.Code) error {
 		return fmt.Errorf("create generated image directory: %w", err)
 	}
 
+	started := time.Now()
+	prompt := stationImagePrompt(s.quest, code)
+	slog.Info("generating station image",
+		"code_id", code.ID,
+		"code_type", code.Type,
+		"model", string(stationImageModel),
+		"output_format", "webp",
+		"size", string(openai.ImageGenerateParamsSize1024x1024),
+		"quality", string(openai.ImageGenerateParamsQualityMedium),
+		"custom_prompt", strings.TrimSpace(code.ImagePrompt) != "",
+		"prompt_length", len(prompt),
+	)
 	client := openai.NewClient(option.WithAPIKey(s.cfg.OpenAIAPIKey))
 	resp, err := client.Images.Generate(ctx, openai.ImageGenerateParams{
-		Prompt:       stationImagePrompt(s.quest, code),
+		Prompt:       prompt,
 		Model:        stationImageModel,
 		N:            openai.Int(1),
 		OutputFormat: openai.ImageGenerateParamsOutputFormatWebP,
@@ -105,6 +129,12 @@ func (s *Server) generateCodeImage(ctx context.Context, code game.Code) error {
 	if err := os.WriteFile(imagePath, imageBytes, 0o644); err != nil {
 		return fmt.Errorf("save generated image for %s: %w", code.ID, err)
 	}
+	slog.Info("station image saved",
+		"code_id", code.ID,
+		"path", imagePath,
+		"bytes", len(imageBytes),
+		"duration_ms", time.Since(started).Milliseconds(),
+	)
 	return nil
 }
 
