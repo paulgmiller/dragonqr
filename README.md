@@ -206,7 +206,6 @@ Kubernetes manifests live in `k8s/` and target the `dragon` namespace. They incl
 - `deployment.yaml`: Runs one `dragonqr` pod.
 - `service.yaml`: Exposes the pod inside the cluster.
 - `ingress.yaml`: Routes public HTTP traffic to the service.
-- `kustomization.yaml`: Applies everything together with Kustomize.
 
 Before deploying, edit:
 
@@ -224,7 +223,7 @@ kubectl -n dragon create secret generic dragonqr-organizer --from-literal=passwo
 Deploy:
 
 ```sh
-kubectl apply -k k8s/
+kubectl apply -f k8s/
 ```
 
 Check rollout:

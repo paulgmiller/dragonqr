@@ -22,7 +22,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: dragonqr
-          image: ghcr.io/YOUR-ORG/dragonqr:latest
+          image: paulgmiller/dragonqr:latest
           imagePullPolicy: IfNotPresent
           args:
             - "-addr"
