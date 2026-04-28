@@ -155,7 +155,7 @@ func (s *Server) handlePrint(w http.ResponseWriter, r *http.Request) {
 	type printableCode struct {
 		game.Code
 		URL string
-		QR  string
+		QR  template.URL
 	}
 	var codes []printableCode
 	for _, code := range s.quest.Codes {
@@ -254,7 +254,7 @@ func (s *Server) baseURL(r *http.Request) string {
 	return scheme + "://" + r.Host
 }
 
-func qrDataURL(value string) (string, error) {
+func qrDataURL(value string) (template.URL, error) {
 	img, err := qrcode.New(value, qrcode.Medium)
 	if err != nil {
 		return "", err
@@ -263,7 +263,7 @@ func qrDataURL(value string) (string, error) {
 	if err := png.Encode(&buf, img.Image(256)); err != nil {
 		return "", err
 	}
-	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(buf.Bytes()), nil
+	return template.URL("data:image/png;base64," + base64.StdEncoding.EncodeToString(buf.Bytes())), nil
 }
 
 func IsServerClosed(err error) bool {

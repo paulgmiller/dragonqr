@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dragonqr
+  namespace: dragon
+  labels:
+    app.kubernetes.io/name: dragonqr
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dragonqr
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: dragonqr
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+      containers:
+        - name: dragonqr
+          image: ghcr.io/YOUR-ORG/dragonqr:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            - "-addr"
+            - "0.0.0.0:8080"
+            - "-base-url"
+            - "$(DRAGONQR_BASE_URL)"
+            - "-quest"
+            - "/app/quest.yaml"
+            - "-data"
+            - "/app/data/players.json"
+          env:
+            - name: DRAGONQR_BASE_URL
+              value: "https://dragon.northbriton.net"
+            - name: ORGANIZER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: dragonqr-organizer
+                  key: password
+                  optional: true
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: dragonqr-data

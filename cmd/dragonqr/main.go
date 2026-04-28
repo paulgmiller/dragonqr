@@ -33,6 +33,9 @@ func run() error {
 	flag.StringVar(&dataPath, "data", "data/players.json", "player JSON data file")
 	flag.StringVar(&baseURL, "base-url", "", "public base URL for printed QR codes")
 	flag.Parse()
+	if baseURL == "" {
+		baseURL = os.Getenv("DRAGONQR_BASE_URL")
+	}
 
 	q, err := game.LoadQuest(questPath)
 	if err != nil {

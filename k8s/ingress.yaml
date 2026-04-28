@@ -1,0 +1,20 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dragonqr
+  namespace: dragon
+  labels:
+    app.kubernetes.io/name: dragonqr
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: dragon.northbriton.net
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: dragonqr
+                port:
+                  name: http

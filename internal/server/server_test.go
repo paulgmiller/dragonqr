@@ -57,6 +57,13 @@ func TestPrintPageIncludesAllQuestCodes(t *testing.T) {
 	if count != len(app.quest.Codes) {
 		t.Fatalf("qr-card count = %d, want %d", count, len(app.quest.Codes))
 	}
+	if strings.Contains(rr.Body.String(), "#ZgotmplZ") {
+		t.Fatal("print page contains sanitized QR data URL placeholder #ZgotmplZ")
+	}
+	qrCount := strings.Count(rr.Body.String(), `src="data:image/png;base64,`)
+	if qrCount != len(app.quest.Codes) {
+		t.Fatalf("QR data URL count = %d, want %d", qrCount, len(app.quest.Codes))
+	}
 }
 
 func testServer(t *testing.T, password string) *Server {
