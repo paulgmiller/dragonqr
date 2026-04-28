@@ -11,8 +11,23 @@
   <div><span>Health</span><strong>{{.Player.Health}}/{{.Player.MaxHealth}}</strong></div>
   <div><span>Attack</span><strong>{{.Player.Attack}}</strong></div>
   <div><span>Armor</span><strong>{{.Player.Armor}}</strong></div>
-  <div><span>Companions</span><strong>{{len .Player.Companions}}</strong></div>
+  <div><span>Companions</span><strong>{{len .CompanionNames}}</strong></div>
 </section>
+
+{{if .ActiveCombatURL}}
+<section class="panel warning">
+  <h2>Fight In Progress</h2>
+  <p>Finish your current fight before scanning another code.</p>
+  <a class="button" href="{{.ActiveCombatURL}}">Resume Fight</a>
+</section>
+{{end}}
+
+{{if le .Player.Health 0}}
+<section class="panel warning">
+  <h2>Find a Healer</h2>
+  <p>Your health is zero. Scan a healing code before continuing the quest.</p>
+</section>
+{{end}}
 
 <section class="panel">
   <h2>Dragon Readiness</h2>
@@ -28,14 +43,14 @@
 <section class="grid">
   <article class="panel">
     <h2>Gear</h2>
-    {{if .Player.Items}}
-      <ul>{{range .Player.Items}}<li>{{.}}</li>{{end}}</ul>
+    {{if .GearNames}}
+      <ul>{{range .GearNames}}<li>{{.}}</li>{{end}}</ul>
     {{else}}<p>No gear yet.</p>{{end}}
   </article>
   <article class="panel">
     <h2>Companions</h2>
-    {{if .Player.Companions}}
-      <ul>{{range .Player.Companions}}<li>{{.}}</li>{{end}}</ul>
+    {{if .CompanionNames}}
+      <ul>{{range .CompanionNames}}<li>{{.}}</li>{{end}}</ul>
     {{else}}<p>No companions yet.</p>{{end}}
   </article>
 </section>
@@ -47,4 +62,3 @@
   {{else}}<p>No clues yet.</p>{{end}}
 </section>
 {{template "foot" .}}
-

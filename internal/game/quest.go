@@ -51,6 +51,7 @@ type Code struct {
 	Description   string   `yaml:"description"`
 	Clue          string   `yaml:"clue"`
 	OrganizerNote string   `yaml:"organizer_note"`
+	ImagePrompt   string   `yaml:"image_prompt"`
 	Effects       Effects  `yaml:"effects"`
 	Rewards       Effects  `yaml:"rewards"`
 	Enemy         Enemy    `yaml:"enemy"`

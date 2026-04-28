@@ -49,6 +49,7 @@ func run() error {
 		Addr:              addr,
 		BaseURL:           baseURL,
 		OrganizerPassword: os.Getenv("ORGANIZER_PASSWORD"),
+		OpenAIAPIKey:      os.Getenv("OPENAI_API_KEY"),
 	})
 	if err != nil {
 		return err

@@ -112,6 +112,15 @@ button,
   gap: 12px;
   margin: 16px 0;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.actions form {
+  margin: 0;
+}
+
+.secondary {
+  background: #4d433b;
 }
 
 .stats {
@@ -165,6 +174,11 @@ button,
   border-color: #9fd2b8;
 }
 
+.warning {
+  border-color: #dca44b;
+  background: #fff5df;
+}
+
 .clue {
   border-color: #e6c56f;
   background: #fff7dd;
@@ -177,7 +191,7 @@ button,
 
 .code-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.8fr);
+  grid-template-columns: 92px minmax(0, 1fr) minmax(220px, 0.8fr);
   gap: 16px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--line);
@@ -193,6 +207,42 @@ small,
 code {
   color: var(--muted);
   overflow-wrap: anywhere;
+}
+
+.code-art {
+  width: 92px;
+  aspect-ratio: 1;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #fff;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.code-art img,
+.station-visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.station-visual {
+  width: min(420px, 100%);
+  aspect-ratio: 1;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+  margin: 16px 0;
+}
+
+.rounds {
+  padding-left: 1.3rem;
 }
 
 .print-title {
@@ -220,12 +270,25 @@ code {
 .qr-card img {
   display: block;
   width: 100%;
-  max-width: 180px;
   margin: 0 auto 8px;
+}
+
+.qr-card .station-image {
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+.qr-card .qr-image {
+  max-width: 150px;
 }
 
 .qr-card h2 {
   margin-bottom: 4px;
+  text-align: center;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 700px) {
@@ -259,4 +322,3 @@ code {
     page-break-inside: avoid;
   }
 }
-

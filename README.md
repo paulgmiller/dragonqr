@@ -28,10 +28,12 @@ go test ./...
 
 1. Edit `quest.yaml` if you want to change the story, clues, stats, or QR code locations.
 2. Start the server with a base URL that phones can reach.
-3. Open `/organizer/print`.
-4. Print and cut out the QR cards.
-5. Place each QR card using its organizer note.
-6. Send players to the start QR code first.
+3. Open `/organizer`.
+4. Generate missing station images if you want art on the printable cards.
+5. Open `/organizer/print`.
+6. Print and cut out the reusable QR cards.
+7. Place each QR card using the organizer note matched by stable ID.
+8. Send players to the start QR code first.
 
 For a real event, `-base-url` must be the URL players' phones can open. If the server runs on a laptop on your local network, use that laptop's LAN address, for example:
 
@@ -94,6 +96,7 @@ Each code has:
 - `description`: Text shown when scanned.
 - `clue`: Hint shown after the scan.
 - `organizer_note`: Placement note shown on organizer and print pages.
+- `image_prompt`: Optional image-generation prompt. If omitted, the app builds one from the title, description, type, and quest title.
 - `effects`: Stat changes for power-ups, healing, companions, and clues.
 - `enemy`: Enemy stats for `enemy` and `dragon` codes.
 - `rewards`: Stat changes earned after defeating a regular enemy.
@@ -130,20 +133,36 @@ Example enemy:
     health: 2
 ```
 
-After editing `quest.yaml`, restart the server and reprint the QR codes if any `id` or `-base-url` changed.
+The printed cards show stable IDs instead of story titles or raw URLs, so you can change titles, descriptions, clues, organizer notes, and generated art while keeping the same printed cards. Reprint only when a code `id` or `-base-url` changes.
+
+## Station Images
+
+The organizer page can generate one local WebP image for each station. Set `OPENAI_API_KEY` before starting the server:
+
+```sh
+OPENAI_API_KEY=sk-... go run ./cmd/dragonqr -addr 127.0.0.1:8097 -base-url http://127.0.0.1:8097
+```
+
+Then open `/organizer` and use "Generate Missing Images" or the per-code buttons. Existing image files are not overwritten. Images are saved under:
+
+```text
+static/generated/stations/{code-id}.webp
+```
+
+The app uses OpenAI's `gpt-image-2` image model. If `image_prompt` is absent in `quest.yaml`, the prompt is built from the current code data. For Docker deploys, generate the images before `docker build` if you want them baked into the image; the Dockerfile already copies `static/`.
 
 ## Game Balance
 
-Combat is intentionally simple:
+Combat is intentionally simple and resolves one roll at a time:
 
-- Player damage per round is `player attack - enemy armor`, minimum `1`.
-- Enemy damage per round is `enemy attack - player armor`, minimum `1`.
-- The player wins if they can defeat the enemy before being reduced to zero health.
-- On a loss, the player escapes with `1` health.
+- Scanning an enemy starts a battle page.
+- Each tap rolls `1d6` for the player and `1d6` for the enemy.
+- Player damage is `player roll + player attack - enemy armor`, minimum `1`.
+- If the enemy survives, enemy damage is `enemy roll + enemy attack - player armor`, minimum `1`.
+- The player wins when enemy health reaches `0`.
+- If player health reaches `0`, other scans are blocked until a `healing` code is scanned.
 
 Use smaller numbers for younger kids and shorter games. If players get stuck before the dragon, lower `dragon_requirements` or add more `effects` and `rewards`.
-
-## TODO image generation.
 
 
 ## Files

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 
@@ -66,6 +67,59 @@ func TestPrintPageIncludesAllQuestCodes(t *testing.T) {
 	}
 }
 
+func TestPrintPageUsesReusableIDCards(t *testing.T) {
+	app := testServer(t, "")
+	req := httptest.NewRequest(http.MethodGet, "/organizer/print", nil)
+	req.Host = "example.test"
+	rr := httptest.NewRecorder()
+
+	app.Handler().ServeHTTP(rr, req)
+
+	body := rr.Body.String()
+	if strings.Contains(body, "Sword") {
+		t.Fatal("print page contains code title; reusable cards should show stable IDs only")
+	}
+	if strings.Contains(body, "http://example.test/q/sword") {
+		t.Fatal("print page exposes raw code URL")
+	}
+	if !strings.Contains(body, ">sword<") {
+		t.Fatal("print page does not show stable code ID")
+	}
+}
+
+func TestGenerateImagesRequiresAPIKey(t *testing.T) {
+	app := testServer(t, "")
+	req := httptest.NewRequest(http.MethodPost, "/organizer/images/generate", nil)
+	rr := httptest.NewRecorder()
+
+	app.Handler().ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	if !strings.Contains(rr.Body.String(), "OPENAI_API_KEY is required") {
+		t.Fatal("expected missing API key error")
+	}
+}
+
+func TestPrintPageIncludesGeneratedStationImage(t *testing.T) {
+	app := testServer(t, "")
+	if err := os.MkdirAll(app.cfg.GeneratedImageDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(app.cfg.GeneratedImageDir+"/sword.webp", []byte("webp"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/organizer/print", nil)
+	rr := httptest.NewRecorder()
+
+	app.Handler().ServeHTTP(rr, req)
+
+	if !strings.Contains(rr.Body.String(), `/static/generated/stations/sword.webp`) {
+		t.Fatal("print page did not include generated station image")
+	}
+}
+
 func testServer(t *testing.T, password string) *Server {
 	t.Helper()
 	q := game.Quest{
@@ -88,7 +142,10 @@ func testServer(t *testing.T, password string) *Server {
 	if err != nil {
 		t.Fatal(err)
 	}
-	app, err := New(&q, store, Config{OrganizerPassword: password})
+	app, err := New(&q, store, Config{
+		OrganizerPassword: password,
+		GeneratedImageDir: t.TempDir(),
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

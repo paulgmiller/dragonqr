@@ -5,6 +5,12 @@
   <p>{{.Result.Body}}</p>
 </section>
 
+{{if .ImageURL}}
+<section class="station-visual">
+  <img src="{{.ImageURL}}" alt="">
+</section>
+{{end}}
+
 {{if .Result.Clue}}
 <section class="panel clue">
   <h2>Clue</h2>
@@ -23,4 +29,3 @@
   <a class="button" href="/status">View Status</a>
 </nav>
 {{template "foot" .}}
-

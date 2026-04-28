@@ -1,6 +1,10 @@
 package game
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+	"math/rand/v2"
+)
 
 type ScanResult struct {
 	Code        Code
@@ -11,6 +15,10 @@ type ScanResult struct {
 	AlreadySeen bool
 	Victory     bool
 	Ready       bool
+	Blocked     bool
+	Defeated    bool
+	Combat      *Combat
+	LastRound   *CombatRound
 }
 
 func ApplyScan(q *Quest, p *Player, code Code) ScanResult {
@@ -20,6 +28,25 @@ func ApplyScan(q *Quest, p *Player, code Code) ScanResult {
 		Title:  code.Title,
 		Body:   code.Description,
 		Clue:   code.Clue,
+	}
+
+	if p.Combat != nil {
+		if p.Combat.CodeID == code.ID {
+			result.Combat = p.Combat
+			result.Body = "The fight is still underway. Roll again when you are ready."
+			return result
+		}
+		result.Blocked = true
+		result.Title = "Finish the fight"
+		result.Body = "You are already in a fight. Finish that enemy before scanning another code."
+		return result
+	}
+
+	if p.Health <= 0 && code.Type != CodeHealing && code.Type != CodeStart {
+		result.Blocked = true
+		result.Title = "Find a healer"
+		result.Body = "You are out of health. Find a healer code before continuing."
+		return result
 	}
 
 	if code.Type == CodeStart {
@@ -33,7 +60,7 @@ func ApplyScan(q *Quest, p *Player, code Code) ScanResult {
 		return applyDragon(q, p, code, result)
 	}
 
-	if p.HasScanned(code.ID) {
+	if p.HasScanned(code.ID) && !(code.Type == CodeHealing && p.Health <= 0) {
 		result.AlreadySeen = true
 		result.Body = "You have already claimed this part of the quest."
 		return result
@@ -42,32 +69,26 @@ func ApplyScan(q *Quest, p *Player, code Code) ScanResult {
 	switch code.Type {
 	case CodeWeapon:
 		applyEffects(p, code.Effects)
-		p.addItem(code.Title)
+		p.addItem(code.ID)
 		result.Body = fmt.Sprintf("%s Attack +%d.", code.Description, code.Effects.Attack)
 	case CodeArmor:
 		applyEffects(p, code.Effects)
-		p.addItem(code.Title)
+		p.addItem(code.ID)
 		result.Body = fmt.Sprintf("%s Armor +%d.", code.Description, code.Effects.Armor)
 	case CodeCompanion:
 		applyEffects(p, code.Effects)
-		p.addCompanion(code.Title)
+		p.addCompanion(code.ID)
 		result.Body = fmt.Sprintf("%s %s joins your party.", code.Description, code.Title)
 	case CodeHealing:
 		before := p.Health
-		applyEffects(p, code.Effects)
+		restoreHealth(p, code.Effects.Health)
 		result.Body = fmt.Sprintf("%s Health restored from %d to %d.", code.Description, before, p.Health)
 	case CodeClue:
 		applyEffects(p, code.Effects)
 		result.Body = code.Description
 	case CodeEnemy:
-		victory, damage := fight(p, code.Enemy)
-		if victory {
-			applyEffects(p, code.Rewards)
-			p.addDefeated(code.ID)
-			result.Body = fmt.Sprintf("You defeated %s and took %d damage.", code.Title, damage)
-		} else {
-			result.Body = fmt.Sprintf("%s was too strong this time. You escaped with 1 health. Find more gear or healing, then come back.", code.Title)
-		}
+		result = startCombat(p, code, result)
+		return result
 	}
 
 	p.markScanned(code.ID)
@@ -85,22 +106,103 @@ func applyDragon(q *Quest, p *Player, code Code, result ScanResult) ScanResult {
 	}
 	if !ready {
 		result.Body = "The dragon's smoke is too thick. Gather more strength first: " + missing
-		p.markScanned(code.ID)
-		p.addClue(code.ID, code.Clue)
 		return result
 	}
 
-	victory, damage := fight(p, code.Enemy)
-	p.markScanned(code.ID)
-	p.addClue(code.ID, code.Clue)
-	if victory {
-		p.DragonDefeated = true
-		result.Victory = true
-		result.Body = fmt.Sprintf("You survived the final battle with %d health after taking %d damage. %s", p.Health, damage, q.VictoryText)
-		return result
+	return startCombat(p, code, result)
+}
+
+func startCombat(p *Player, code Code, result ScanResult) ScanResult {
+	p.Combat = &Combat{
+		CodeID:      code.ID,
+		EnemyHealth: code.Enemy.Health,
+		IsDragon:    code.Type == CodeDragon,
 	}
-	result.Body = "The dragon knocks you back, but you escape with 1 health. Seek any missed clues, friends, or healing before trying again."
+	result.Combat = p.Combat
+	result.Body = fmt.Sprintf("%s Roll to attack.", code.Description)
 	return result
+}
+
+var ErrNoActiveCombat = errors.New("no active combat")
+
+func RollCombat(q *Quest, p *Player) (ScanResult, error) {
+	return rollCombat(q, p, rand.IntN(6)+1, rand.IntN(6)+1)
+}
+
+func RollCombatWithRolls(q *Quest, p *Player, playerRoll int, enemyRoll int) (ScanResult, error) {
+	return rollCombat(q, p, playerRoll, enemyRoll)
+}
+
+func rollCombat(q *Quest, p *Player, playerRoll int, enemyRoll int) (ScanResult, error) {
+	if p.Combat == nil {
+		return ScanResult{}, ErrNoActiveCombat
+	}
+	code, ok := q.Code(p.Combat.CodeID)
+	if !ok {
+		return ScanResult{}, fmt.Errorf("active combat references missing code %q", p.Combat.CodeID)
+	}
+	if playerRoll < 1 || playerRoll > 6 || enemyRoll < 1 || enemyRoll > 6 {
+		return ScanResult{}, fmt.Errorf("combat rolls must be between 1 and 6")
+	}
+
+	combat := p.Combat
+	playerDamage := max(1, playerRoll+p.Attack-code.Enemy.Armor)
+	combat.EnemyHealth = max(0, combat.EnemyHealth-playerDamage)
+
+	enemyDamage := 0
+	if combat.EnemyHealth > 0 {
+		enemyDamage = max(1, enemyRoll+code.Enemy.Attack-p.Armor)
+		p.Health = max(0, p.Health-enemyDamage)
+	}
+
+	round := CombatRound{
+		PlayerRoll:   playerRoll,
+		EnemyRoll:    enemyRoll,
+		PlayerDamage: playerDamage,
+		EnemyDamage:  enemyDamage,
+		EnemyHealth:  combat.EnemyHealth,
+		PlayerHealth: p.Health,
+	}
+	combat.Rounds = append(combat.Rounds, round)
+	result := ScanResult{
+		Code:      code,
+		Player:    p,
+		Title:     code.Title,
+		Body:      fmt.Sprintf("You rolled %d and dealt %d damage. %s rolled %d and dealt %d damage.", playerRoll, playerDamage, code.Title, enemyRoll, enemyDamage),
+		Clue:      "",
+		Ready:     code.Type == CodeDragon,
+		Combat:    combat,
+		LastRound: &round,
+	}
+
+	if combat.EnemyHealth <= 0 {
+		p.Combat = nil
+		p.markScanned(code.ID)
+		p.addClue(code.ID, code.Clue)
+		result.Combat = nil
+		result.Clue = code.Clue
+		result.Defeated = true
+		if code.Type == CodeDragon {
+			p.DragonDefeated = true
+			result.Victory = true
+			result.Body = fmt.Sprintf("You defeated %s with %d health remaining. %s", code.Title, p.Health, q.VictoryText)
+			return result, nil
+		}
+		applyEffects(p, code.Rewards)
+		p.addDefeated(code.ID)
+		result.Body = fmt.Sprintf("You defeated %s. Rewards claimed.", code.Title)
+		return result, nil
+	}
+
+	if p.Health <= 0 {
+		p.Combat = nil
+		result.Combat = nil
+		result.Blocked = true
+		result.Body = fmt.Sprintf("%s reduced your health to zero. Find a healer code before continuing.", code.Title)
+		return result, nil
+	}
+
+	return result, nil
 }
 
 func DragonReady(q *Quest, p *Player) (bool, string) {
@@ -112,8 +214,9 @@ func DragonReady(q *Quest, p *Player) (bool, string) {
 	if p.Armor < req.MinArmor {
 		missing += fmt.Sprintf("armor %d/%d; ", p.Armor, req.MinArmor)
 	}
-	if len(p.Companions) < req.MinCompanions {
-		missing += fmt.Sprintf("companions %d/%d; ", len(p.Companions), req.MinCompanions)
+	companionCount := p.CompanionCount(q)
+	if companionCount < req.MinCompanions {
+		missing += fmt.Sprintf("companions %d/%d; ", companionCount, req.MinCompanions)
 	}
 	for _, id := range req.Defeated {
 		if !p.HasDefeated(id) {
@@ -142,24 +245,12 @@ func applyEffects(p *Player, effects Effects) {
 	}
 }
 
-func fight(p *Player, enemy Enemy) (bool, int) {
-	playerDamage := max(1, p.Attack-enemy.Armor)
-	enemyDamage := max(1, enemy.Attack-p.Armor)
-	roundsToWin := ceilDiv(enemy.Health, playerDamage)
-	roundsToLose := ceilDiv(p.Health, enemyDamage)
-	if roundsToWin <= roundsToLose {
-		damage := enemyDamage * (roundsToWin - 1)
-		p.Health = max(1, p.Health-damage)
-		return true, damage
+func restoreHealth(p *Player, amount int) {
+	if amount <= 0 {
+		return
 	}
-	damage := enemyDamage * roundsToLose
-	p.Health = 1
-	return false, damage
-}
-
-func ceilDiv(a int, b int) int {
-	if b <= 0 {
-		return 0
+	p.Health += amount
+	if p.Health > p.MaxHealth {
+		p.Health = p.MaxHealth
 	}
-	return (a + b - 1) / b
 }

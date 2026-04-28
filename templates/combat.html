@@ -1,0 +1,36 @@
+{{template "head" .}}
+<section class="hero compact">
+  <p class="eyebrow">Battle</p>
+  <h1>{{.Result.Title}}</h1>
+  <p>{{.Result.Body}}</p>
+</section>
+
+{{if .ImageURL}}
+<section class="station-visual">
+  <img src="{{.ImageURL}}" alt="">
+</section>
+{{end}}
+
+<section class="stats">
+  <div><span>Your Health</span><strong>{{.Player.Health}}/{{.Player.MaxHealth}}</strong></div>
+  <div><span>Your Attack</span><strong>{{.Player.Attack}}</strong></div>
+  <div><span>Your Armor</span><strong>{{.Player.Armor}}</strong></div>
+  <div><span>Enemy Health</span><strong>{{.Combat.EnemyHealth}}</strong></div>
+</section>
+
+<form method="post" action="/combat/roll" class="actions">
+  <button type="submit">Roll</button>
+  <a class="button secondary" href="/status">Status</a>
+</form>
+
+{{if .Combat.Rounds}}
+<section class="panel">
+  <h2>Rounds</h2>
+  <ol class="rounds">
+    {{range .Combat.Rounds}}
+      <li>You rolled {{.PlayerRoll}} for {{.PlayerDamage}} damage. Enemy rolled {{.EnemyRoll}} for {{.EnemyDamage}} damage.</li>
+    {{end}}
+  </ol>
+</section>
+{{end}}
+{{template "foot" .}}

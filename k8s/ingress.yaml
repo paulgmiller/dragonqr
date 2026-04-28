@@ -6,7 +6,6 @@ metadata:
   labels:
     app.kubernetes.io/name: dragonqr
 spec:
-  ingressClassName: nginx
   rules:
     - host: dragon.northbriton.net
       http:

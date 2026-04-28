@@ -25,6 +25,7 @@ type Player struct {
 	Defeated       []string  `json:"defeated"`
 	Scanned        []string  `json:"scanned"`
 	Clues          []Clue    `json:"clues"`
+	Combat         *Combat   `json:"combat,omitempty"`
 	DragonDefeated bool      `json:"dragon_defeated"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
@@ -33,6 +34,22 @@ type Player struct {
 type Clue struct {
 	From string `json:"from"`
 	Text string `json:"text"`
+}
+
+type Combat struct {
+	CodeID      string        `json:"code_id"`
+	EnemyHealth int           `json:"enemy_health"`
+	IsDragon    bool          `json:"is_dragon"`
+	Rounds      []CombatRound `json:"rounds"`
+}
+
+type CombatRound struct {
+	PlayerRoll   int `json:"player_roll"`
+	EnemyRoll    int `json:"enemy_roll"`
+	PlayerDamage int `json:"player_damage"`
+	EnemyDamage  int `json:"enemy_damage"`
+	EnemyHealth  int `json:"enemy_health"`
+	PlayerHealth int `json:"player_health"`
 }
 
 type Store struct {
@@ -165,6 +182,11 @@ func clonePlayer(p *Player) *Player {
 	cp.Defeated = append([]string(nil), p.Defeated...)
 	cp.Scanned = append([]string(nil), p.Scanned...)
 	cp.Clues = append([]Clue(nil), p.Clues...)
+	if p.Combat != nil {
+		combat := *p.Combat
+		combat.Rounds = append([]CombatRound(nil), p.Combat.Rounds...)
+		cp.Combat = &combat
+	}
 	return &cp
 }
 
@@ -176,21 +198,85 @@ func (p *Player) HasDefeated(id string) bool {
 	return contains(p.Defeated, id)
 }
 
+func (p *Player) GearNames(q *Quest) []string {
+	return p.codeTitles(q, p.Items, map[CodeType]bool{
+		CodeWeapon: true,
+		CodeArmor:  true,
+	})
+}
+
+func (p *Player) CompanionNames(q *Quest) []string {
+	return p.codeTitles(q, p.Companions, map[CodeType]bool{
+		CodeCompanion: true,
+	})
+}
+
+func (p *Player) CompanionCount(q *Quest) int {
+	return len(p.codeTitles(q, p.Companions, map[CodeType]bool{
+		CodeCompanion: true,
+	}))
+}
+
+func (p *Player) codeTitles(q *Quest, stored []string, allowed map[CodeType]bool) []string {
+	seen := map[string]bool{}
+	var titles []string
+	addCode := func(code Code) {
+		if !allowed[code.Type] || seen[code.ID] {
+			return
+		}
+		seen[code.ID] = true
+		titles = append(titles, code.Title)
+	}
+
+	var unknown []string
+	for _, value := range stored {
+		if code, ok := q.Code(value); ok {
+			addCode(code)
+			continue
+		}
+		matched := false
+		for _, code := range q.Codes {
+			if code.Title == value {
+				addCode(code)
+				matched = true
+				break
+			}
+		}
+		if !matched && value != "" {
+			unknown = append(unknown, value)
+		}
+	}
+	for _, id := range p.Scanned {
+		if code, ok := q.Code(id); ok {
+			addCode(code)
+		}
+	}
+	if len(titles) == 0 {
+		for _, value := range unknown {
+			if !seen[value] {
+				seen[value] = true
+				titles = append(titles, value)
+			}
+		}
+	}
+	return titles
+}
+
 func (p *Player) markScanned(id string) {
 	if !contains(p.Scanned, id) {
 		p.Scanned = append(p.Scanned, id)
 	}
 }
 
-func (p *Player) addItem(title string) {
-	if !contains(p.Items, title) {
-		p.Items = append(p.Items, title)
+func (p *Player) addItem(id string) {
+	if !contains(p.Items, id) {
+		p.Items = append(p.Items, id)
 	}
 }
 
-func (p *Player) addCompanion(title string) {
-	if !contains(p.Companions, title) {
-		p.Companions = append(p.Companions, title)
+func (p *Player) addCompanion(id string) {
+	if !contains(p.Companions, id) {
+		p.Companions = append(p.Companions, id)
 	}
 }
 

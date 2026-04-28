@@ -7,23 +7,40 @@
 
 <nav class="actions">
   <a class="button" href="/organizer/print">Printable QR Codes</a>
+  <form method="post" action="/organizer/images/generate">
+    <button type="submit">Generate Missing Images</button>
+  </form>
 </nav>
+
+{{if .Message}}<p class="notice">{{.Message}}</p>{{end}}
+{{if .Error}}<p class="error">{{.Error}}</p>{{end}}
 
 <section class="panel">
   <h2>Quest Codes</h2>
   <div class="code-list">
-    {{range .Quest.Codes}}
+    {{range .Codes}}
       <article class="code-row">
+        <div class="code-art">
+          {{if .ImageURL}}
+            <img src="{{.ImageURL}}" alt="">
+          {{else}}
+            <span>No image</span>
+          {{end}}
+        </div>
         <div>
           <strong>{{.Title}}</strong>
           <span>{{.ID}} · {{.Type}}</span>
           <p>{{.OrganizerNote}}</p>
           {{if .Clue}}<p><b>Clue:</b> {{.Clue}}</p>{{end}}
+          {{if not .HasImage}}
+            <form method="post" action="{{.GenerateURL}}">
+              <button type="submit">Generate Image</button>
+            </form>
+          {{end}}
         </div>
-        <code>{{$.BaseURL}}/q/{{.ID}}</code>
+        <code>{{.URL}}</code>
       </article>
     {{end}}
   </div>
 </section>
 {{template "foot" .}}
-

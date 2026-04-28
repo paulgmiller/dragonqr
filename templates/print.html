@@ -1,19 +1,16 @@
 {{template "head" .}}
 <section class="print-title">
   <h1>{{.Quest.Title}} QR Codes</h1>
-  <p>Cut out each code and place it using the organizer note.</p>
+  <p>Cut out each reusable card and place it by matching its stable ID in the organizer view.</p>
 </section>
 
 <section class="print-grid">
   {{range .Codes}}
     <article class="qr-card">
-      <img src="{{.QR}}" alt="QR code for {{.Title}}">
-      <h2>{{.Title}}</h2>
-      <p>{{.Label}} · {{.ID}}</p>
-      <p>{{.OrganizerNote}}</p>
-      <small>{{.URL}}</small>
+      {{if .ImageURL}}<img class="station-image" src="{{.ImageURL}}" alt="">{{end}}
+      <img class="qr-image" src="{{.QR}}" alt="QR code for {{.ID}}">
+      <h2>{{.ID}}</h2>
     </article>
   {{end}}
 </section>
 {{template "foot" .}}
-

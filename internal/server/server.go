@@ -24,6 +24,8 @@ type Config struct {
 	Addr              string
 	BaseURL           string
 	OrganizerPassword string
+	OpenAIAPIKey      string
+	GeneratedImageDir string
 }
 
 type Server struct {
@@ -38,6 +40,9 @@ func New(q *game.Quest, store *game.Store, cfg Config) (*Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse templates: %w", err)
 	}
+	if cfg.GeneratedImageDir == "" {
+		cfg.GeneratedImageDir = filepath.Join(staticDir(), "generated", "stations")
+	}
 	return &Server{quest: q, store: store, cfg: cfg, tpl: tpl}, nil
 }
 
@@ -48,8 +53,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /status", s.handleStatus)
 	mux.HandleFunc("GET /q/{id}", s.handleCode)
 	mux.HandleFunc("POST /start", s.handleStart)
+	mux.HandleFunc("POST /combat/roll", s.handleCombatRoll)
 	mux.HandleFunc("GET /organizer", s.withOrganizerAuth(s.handleOrganizer))
 	mux.HandleFunc("GET /organizer/print", s.withOrganizerAuth(s.handlePrint))
+	mux.HandleFunc("POST /organizer/images/generate", s.withOrganizerAuth(s.handleGenerateMissingImages))
+	mux.HandleFunc("POST /organizer/images/generate/{id}", s.withOrganizerAuth(s.handleGenerateCodeImage))
 	return mux
 }
 
@@ -109,6 +117,41 @@ func (s *Server) handleCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	result.Player = p
+	if result.Combat != nil {
+		result.Combat = p.Combat
+		s.render(w, "combat.html", s.combatView(r, result))
+		return
+	}
+	s.render(w, "scan.html", s.scanView(r, result))
+}
+
+func (s *Server) handleCombatRoll(w http.ResponseWriter, r *http.Request) {
+	p, ok := s.currentPlayer(r)
+	if !ok {
+		http.Redirect(w, r, "/q/"+url.PathEscape(s.quest.StartCode), http.StatusSeeOther)
+		return
+	}
+	var result game.ScanResult
+	var err error
+	p, err = s.store.Update(p.ID, func(p *game.Player) error {
+		var rollErr error
+		result, rollErr = game.RollCombat(s.quest, p)
+		return rollErr
+	})
+	if errors.Is(err, game.ErrNoActiveCombat) {
+		http.Redirect(w, r, "/status", http.StatusSeeOther)
+		return
+	}
+	if err != nil {
+		http.Error(w, "Could not save combat progress.", http.StatusInternalServerError)
+		return
+	}
+	result.Player = p
+	if result.Combat != nil {
+		result.Combat = p.Combat
+		s.render(w, "combat.html", s.combatView(r, result))
+		return
+	}
 	s.render(w, "scan.html", s.scanView(r, result))
 }
 
@@ -145,17 +188,15 @@ func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleOrganizer(w http.ResponseWriter, r *http.Request) {
-	s.render(w, "organizer.html", map[string]any{
-		"Quest":   s.quest,
-		"BaseURL": s.baseURL(r),
-	})
+	s.render(w, "organizer.html", s.organizerView(r, "", ""))
 }
 
 func (s *Server) handlePrint(w http.ResponseWriter, r *http.Request) {
 	type printableCode struct {
 		game.Code
-		URL string
-		QR  template.URL
+		URL      string
+		QR       template.URL
+		ImageURL string
 	}
 	var codes []printableCode
 	for _, code := range s.quest.Codes {
@@ -165,7 +206,7 @@ func (s *Server) handlePrint(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Could not generate QR code.", http.StatusInternalServerError)
 			return
 		}
-		codes = append(codes, printableCode{Code: code, URL: u, QR: qr})
+		codes = append(codes, printableCode{Code: code, URL: u, QR: qr, ImageURL: s.codeImageURL(code)})
 	}
 	s.render(w, "print.html", map[string]any{
 		"Quest": s.quest,
@@ -184,24 +225,38 @@ func (s *Server) currentPlayer(r *http.Request) (*game.Player, bool) {
 func (s *Server) statusView(r *http.Request, p *game.Player, message string) map[string]any {
 	ready, missing := game.DragonReady(s.quest, p)
 	return map[string]any{
-		"Quest":        s.quest,
-		"Player":       p,
-		"Message":      message,
-		"Ready":        ready,
-		"Missing":      missing,
-		"DragonURL":    s.codeURL(r, s.quest.DragonCode),
-		"OrganizerURL": "/organizer",
+		"Quest":           s.quest,
+		"Player":          p,
+		"Message":         message,
+		"Ready":           ready,
+		"Missing":         missing,
+		"DragonURL":       s.codeURL(r, s.quest.DragonCode),
+		"OrganizerURL":    "/organizer",
+		"GearNames":       p.GearNames(s.quest),
+		"CompanionNames":  p.CompanionNames(s.quest),
+		"ActiveCombatURL": s.activeCombatURL(r, p),
 	}
 }
 
 func (s *Server) scanView(r *http.Request, result game.ScanResult) map[string]any {
 	ready, missing := game.DragonReady(s.quest, result.Player)
 	return map[string]any{
-		"Quest":   s.quest,
-		"Result":  result,
-		"Player":  result.Player,
-		"Ready":   ready,
-		"Missing": missing,
+		"Quest":    s.quest,
+		"Result":   result,
+		"Player":   result.Player,
+		"Ready":    ready,
+		"Missing":  missing,
+		"ImageURL": s.codeImageURL(result.Code),
+	}
+}
+
+func (s *Server) combatView(r *http.Request, result game.ScanResult) map[string]any {
+	return map[string]any{
+		"Quest":    s.quest,
+		"Result":   result,
+		"Player":   result.Player,
+		"Combat":   result.Combat,
+		"ImageURL": s.codeImageURL(result.Code),
 	}
 }
 
