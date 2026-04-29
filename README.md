@@ -1,6 +1,6 @@
 # Dragon QR Quest
 
-[logo](!/static/logo.png)
+![logo](static/logo.png)
 
 Dragon QR Quest is a simple Go webserver for running a kid-friendly fantasy scavenger hunt. Players scan QR codes, create an adventurer, collect weapons and armor, meet companions, fight smaller enemies, follow clues, and eventually face the final dragon.
 
