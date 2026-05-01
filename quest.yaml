@@ -28,8 +28,8 @@ codes:
     title: "Silverleaf Sword"
     label: "Weapon"
     description: "A bright blade hums in your hand."
-    clue: "The next danger waits where shadows hang upside down."
-    organizer_note: "Hide near books, shelves, or a story area."
+    clue: "The dragon likes to cool his breath at the stream"
+    organizer_note: "on second hill"
     effects:
       attack: 3
 
@@ -38,8 +38,8 @@ codes:
     title: "Cave Bat Swarm"
     label: "Enemy"
     description: "A cloud of squeaking bats swoops from the dark."
-    clue: "Look where water would cross if this were a tiny kingdom."
-    organizer_note: "Place somewhere dim or under a table."
+    clue: "A fancy hat is closer to home"
+    organizer_note: "At tree house"
     enemy:
       health: 10
       attack: 2
@@ -53,7 +53,7 @@ codes:
     label: "Armor"
     description: "The shield is light, sturdy, and warm as summer bark."
     clue: "A helper waits where soft things rest."
-    organizer_note: "Place near a bridge-like spot or doorway."
+    organizer_note: "in the trees"
     effects:
       armor: 2
 
@@ -62,8 +62,8 @@ codes:
     title: "Mira the Lantern Pixie"
     label: "Companion"
     description: "Mira promises to sparkle fiercely beside you."
-    clue: "The old bridge keeper guards the way forward."
-    organizer_note: "Place near pillows, blankets, or a couch."
+    clue: "Bats have taken over the old tree house"
+    organizer_note: "fence at new neighorbood"
     effects:
       attack: 1
       health: 1
@@ -73,8 +73,8 @@ codes:
     title: "Grumblebridge Troll"
     label: "Enemy"
     description: "A grumpy troll stamps its feet and demands a duel."
-    clue: "Search where something warm might be brewed."
-    organizer_note: "Place near stairs, a hallway, or a threshold."
+    clue: "A knight has gone wandering to the baseball field and rested under a large tree"
+    organizer_note: "At the big bridge"
     enemy:
       health: 18
       attack: 3
@@ -88,8 +88,8 @@ codes:
     title: "Rubyberry Potion"
     label: "Healing"
     description: "The potion tastes like berries and bravery."
-    clue: "The wolf of ash prowls near something that opens and closes."
-    organizer_note: "Place near a kitchen or snack table."
+    clue: "The wolf of ash prowls the circle fork."
+    organizer_note: "On way down to creek"
     effects:
       health: 5
 
@@ -98,8 +98,8 @@ codes:
     title: "Ash-Furred Wolf"
     label: "Enemy"
     description: "The wolf's paws leave tiny sparks as it circles."
-    clue: "Seek the helm where coats or cloaks sleep."
-    organizer_note: "Place near a door, cabinet, or gate."
+    clue: "The silver sword is on the way home"
+    organizer_note: "At the creek circle start"
     enemy:
       health: 24
       attack: 4
@@ -112,21 +112,11 @@ codes:
     title: "Starforged Helm"
     label: "Armor"
     description: "Starlight flashes across the helm when you put it on."
-    clue: "A forgotten map waits where people make plans."
-    organizer_note: "Place near coats, hats, or dress-up clothes."
+    clue: "There are pixies nearby"
+    organizer_note: "Just cross first bridge"
     effects:
       armor: 1
       health: 1
-
-  - id: map-clue
-    type: clue
-    title: "Map of Ember Hollow"
-    label: "Clue"
-    description: "The map shows a secret path around the dragon's smoke."
-    clue: "The final ally waits where music, games, or celebration begins."
-    organizer_note: "Place near a table or desk."
-    effects:
-      attack: 1
 
   - id: knight-companion
     type: companion
