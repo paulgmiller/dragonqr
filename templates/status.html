@@ -6,8 +6,8 @@
 </section>
 
 <nav class="actions">
-  <form method="post" action="/restart">
-    <button type="submit" class="secondary">Start Again</button>
+  <form method="post" action="{{.RestartURL}}">
+    <button type="submit" class="secondary">{{.RestartLabel}}</button>
   </form>
 </nav>
 
@@ -67,4 +67,5 @@
     <ol>{{range .Player.Clues}}<li>{{.Text}}</li>{{end}}</ol>
   {{else}}<p>No clues yet.</p>{{end}}
 </section>
+{{template "admin_test_nav" .}}
 {{template "foot" .}}

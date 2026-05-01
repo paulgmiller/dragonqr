@@ -219,6 +219,40 @@ code {
   min-width: 0;
 }
 
+.muted {
+  color: var(--muted);
+}
+
+.test-list {
+  display: grid;
+  gap: 10px;
+}
+
+.test-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.test-row.current {
+  border-color: var(--accent);
+}
+
+.test-row span {
+  display: block;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.admin-test-nav {
+  border-color: #9cb9d8;
+}
+
 .code-art {
   width: 92px;
   height: 92px;
@@ -353,6 +387,7 @@ code {
   .stats,
   .grid,
   .code-row,
+  .test-row,
   .print-grid {
     grid-template-columns: 1fr;
   }

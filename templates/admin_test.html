@@ -1,0 +1,59 @@
+{{template "head" .}}
+<section class="hero compact">
+  <p class="eyebrow">Admin Test</p>
+  <h1>Adventure Walkthrough</h1>
+  <p>Open each quest page directly with a test adventurer. Combat and rewards use the same rules as QR scans.</p>
+</section>
+
+<nav class="actions">
+  <a class="button secondary" href="/organizer">Organizer</a>
+  <a class="button secondary" href="/organizer/print">Printable QR Codes</a>
+</nav>
+
+{{if .HasPlayer}}
+  <section class="stats">
+    <div><span>Health</span><strong>{{.Player.Health}}/{{.Player.MaxHealth}}</strong></div>
+    <div><span>Attack</span><strong>{{.Player.Attack}}</strong></div>
+    <div><span>Armor</span><strong>{{.Player.Armor}}</strong></div>
+    <div><span>Found</span><strong>{{len .Player.Scanned}}</strong></div>
+  </section>
+
+  <nav class="actions">
+    <a class="button" href="{{.AdminTest.StatusURL}}">Open Start Status</a>
+    {{if .AdminTest.ActiveCombatURL}}<a class="button" href="{{.AdminTest.ActiveCombatURL}}">Resume Fight</a>{{end}}
+    <form method="post" action="{{.AdminTest.RestartURL}}">
+      <button type="submit" class="secondary">Start Different Test Adventurer</button>
+    </form>
+  </nav>
+{{else}}
+  <section class="panel">
+    <h2>Test Adventurer</h2>
+    <form method="post" action="{{.AdminTest.StartURL}}" class="form">
+      <label>
+        Adventurer name
+        <input name="adventurer_name" value="Test Adventurer" autocomplete="off">
+      </label>
+      <button type="submit">Create Test Adventurer</button>
+    </form>
+  </section>
+{{end}}
+
+<section class="panel">
+  <h2>Quest Pages</h2>
+  <div class="test-list">
+    {{range .AdminTest.Codes}}
+      <article class="test-row{{if .Current}} current{{end}}">
+        <div>
+          <strong>{{.Title}}</strong>
+          <span>{{.ID}} · {{.Type}}{{if .Scanned}} · scanned{{end}}{{if .ActiveCombat}} · active fight{{end}}</span>
+        </div>
+        {{if $.HasPlayer}}
+          <a class="button" href="{{.VisitURL}}">Open Page</a>
+        {{else}}
+          <span class="muted">Create a test adventurer first.</span>
+        {{end}}
+      </article>
+    {{end}}
+  </div>
+</section>
+{{template "foot" .}}

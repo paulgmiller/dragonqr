@@ -29,9 +29,9 @@
   </div>
 </section>
 
-<form method="post" action="/combat/roll" class="actions combat-roll-form">
+<form method="post" action="{{.CombatRollURL}}" class="actions combat-roll-form">
   <button type="submit">Roll Dice</button>
-  <a class="button secondary" href="/status">Status</a>
+  <a class="button secondary" href="{{.StatusURL}}">Status</a>
 </form>
 
 {{if .Combat.Rounds}}
@@ -60,4 +60,5 @@
   });
 })();
 </script>
+{{template "admin_test_nav" .}}
 {{template "foot" .}}

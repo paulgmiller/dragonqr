@@ -102,6 +102,126 @@ func TestOrganizerRequiresPasswordWhenConfigured(t *testing.T) {
 	}
 }
 
+func TestAdminTestRequiresPasswordWhenConfigured(t *testing.T) {
+	app := testServer(t, "secret")
+	req := httptest.NewRequest(http.MethodGet, "/admin/test", nil)
+	rr := httptest.NewRecorder()
+
+	app.Handler().ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusUnauthorized)
+	}
+}
+
+func TestStatusRestartButtonSaysDifferentPlayer(t *testing.T) {
+	app := testServer(t, "")
+	form := url.Values{"adventurer_name": {"Star Pat"}}
+	startReq := httptest.NewRequest(http.MethodPost, "/start", strings.NewReader(form.Encode()))
+	startReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	startRR := httptest.NewRecorder()
+	app.Handler().ServeHTTP(startRR, startReq)
+	cookies := startRR.Result().Cookies()
+	if len(cookies) == 0 {
+		t.Fatal("expected player cookie from start")
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/status", nil)
+	req.AddCookie(cookies[0])
+	rr := httptest.NewRecorder()
+	app.Handler().ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	if !strings.Contains(rr.Body.String(), "Restart as Different Player") {
+		t.Fatal("status page does not include restart-as-different-player button")
+	}
+}
+
+func TestAdminTestStartCreatesPlayerAndListsCodeLinks(t *testing.T) {
+	app := testServer(t, "")
+	form := url.Values{"adventurer_name": {"Tester"}}
+	startReq := httptest.NewRequest(http.MethodPost, "/admin/test/start", strings.NewReader(form.Encode()))
+	startReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	startRR := httptest.NewRecorder()
+
+	app.Handler().ServeHTTP(startRR, startReq)
+
+	if startRR.Code != http.StatusSeeOther {
+		t.Fatalf("status = %d, want %d", startRR.Code, http.StatusSeeOther)
+	}
+	if got := startRR.Header().Get("Location"); got != "/admin/test" {
+		t.Fatalf("Location = %q, want /admin/test", got)
+	}
+	cookies := startRR.Result().Cookies()
+	if len(cookies) == 0 {
+		t.Fatal("expected player cookie")
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/test", nil)
+	req.AddCookie(cookies[0])
+	rr := httptest.NewRecorder()
+	app.Handler().ServeHTTP(rr, req)
+
+	body := rr.Body.String()
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d: %s", rr.Code, http.StatusOK, body)
+	}
+	if !strings.Contains(body, "Adventure Walkthrough") {
+		t.Fatal("admin test page does not render walkthrough title")
+	}
+	if !strings.Contains(body, `href="/admin/test/q/sword"`) {
+		t.Fatal("admin test page does not link directly to quest code page")
+	}
+}
+
+func TestAdminTestWalksQuestCodeWithoutQRCode(t *testing.T) {
+	app := testServer(t, "")
+	cookie := createAdminTestPlayerCookie(t, app)
+	req := httptest.NewRequest(http.MethodGet, "/admin/test/q/sword", nil)
+	req.AddCookie(cookie)
+	rr := httptest.NewRecorder()
+
+	app.Handler().ServeHTTP(rr, req)
+
+	body := rr.Body.String()
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d: %s", rr.Code, http.StatusOK, body)
+	}
+	if !strings.Contains(body, "<h1>Sword</h1>") {
+		t.Fatal("admin test code route did not render the code page")
+	}
+	if !strings.Contains(body, "Admin Test Walkthrough") {
+		t.Fatal("admin test navigation was not included on code page")
+	}
+	player, ok := app.store.Get(cookie.Value)
+	if !ok {
+		t.Fatal("expected test player to be saved")
+	}
+	if player.Attack != 4 {
+		t.Fatalf("player attack = %d, want 4 after sword scan", player.Attack)
+	}
+}
+
+func TestAdminTestCombatUsesAdminRollRoute(t *testing.T) {
+	app := testServer(t, "")
+	cookie := createAdminTestPlayerCookie(t, app)
+	req := httptest.NewRequest(http.MethodGet, "/admin/test/q/dragon", nil)
+	req.AddCookie(cookie)
+	rr := httptest.NewRecorder()
+
+	app.Handler().ServeHTTP(rr, req)
+
+	body := rr.Body.String()
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d: %s", rr.Code, http.StatusOK, body)
+	}
+	if !strings.Contains(body, `action="/admin/test/combat/roll"`) {
+		t.Fatal("admin test combat page does not post rolls to admin test route")
+	}
+}
+
 func TestPrintPageIncludesAllQuestCodes(t *testing.T) {
 	app := testServer(t, "")
 	req := httptest.NewRequest(http.MethodGet, "/organizer/print", nil)
@@ -238,6 +358,20 @@ func testServer(t *testing.T, password string) *Server {
 		t.Fatal(err)
 	}
 	return app
+}
+
+func createAdminTestPlayerCookie(t *testing.T, app *Server) *http.Cookie {
+	t.Helper()
+	form := url.Values{"adventurer_name": {"Tester"}}
+	req := httptest.NewRequest(http.MethodPost, "/admin/test/start", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+	app.Handler().ServeHTTP(rr, req)
+	cookies := rr.Result().Cookies()
+	if len(cookies) == 0 {
+		t.Fatal("expected player cookie")
+	}
+	return cookies[0]
 }
 
 func sameImage(a image.Image, b image.Image) bool {

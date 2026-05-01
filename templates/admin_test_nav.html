@@ -1,0 +1,16 @@
+{{define "admin_test_nav"}}
+{{if .AdminTest}}
+<section class="panel admin-test-nav">
+  <h2>Admin Test Walkthrough</h2>
+  <nav class="actions">
+    <a class="button secondary" href="{{.AdminTest.HomeURL}}">All Pages</a>
+    {{if .AdminTest.PrevURL}}<a class="button secondary" href="{{.AdminTest.PrevURL}}">Previous</a>{{end}}
+    {{if .AdminTest.NextURL}}<a class="button" href="{{.AdminTest.NextURL}}">Next</a>{{end}}
+    {{if .AdminTest.ActiveCombatURL}}<a class="button" href="{{.AdminTest.ActiveCombatURL}}">Resume Fight</a>{{end}}
+    <form method="post" action="{{.AdminTest.RestartURL}}">
+      <button type="submit" class="secondary">Start Different Test Adventurer</button>
+    </form>
+  </nav>
+</section>
+{{end}}
+{{end}}

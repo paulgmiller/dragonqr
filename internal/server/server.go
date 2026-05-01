@@ -56,6 +56,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /start", s.handleStart)
 	mux.HandleFunc("POST /restart", s.handleRestart)
 	mux.HandleFunc("POST /combat/roll", s.handleCombatRoll)
+	mux.HandleFunc("GET /admin/test", s.withOrganizerAuth(s.handleAdminTest))
+	mux.HandleFunc("POST /admin/test/start", s.withOrganizerAuth(s.handleAdminTestStart))
+	mux.HandleFunc("POST /admin/test/restart", s.withOrganizerAuth(s.handleAdminTestRestart))
+	mux.HandleFunc("GET /admin/test/q/{id}", s.withOrganizerAuth(s.handleAdminTestCode))
+	mux.HandleFunc("POST /admin/test/combat/roll", s.withOrganizerAuth(s.handleAdminTestCombatRoll))
 	mux.HandleFunc("GET /organizer", s.withOrganizerAuth(s.handleOrganizer))
 	mux.HandleFunc("GET /organizer/print", s.withOrganizerAuth(s.handlePrint))
 	mux.HandleFunc("POST /organizer/images/generate", s.withOrganizerAuth(s.handleGenerateMissingImages))
@@ -310,28 +315,33 @@ func (s *Server) statusView(r *http.Request, p *game.Player, message string) map
 		"GearNames":       p.GearNames(s.quest),
 		"CompanionNames":  p.CompanionNames(s.quest),
 		"ActiveCombatURL": s.activeCombatURL(r, p),
+		"RestartURL":      "/restart",
+		"RestartLabel":    "Restart as Different Player",
 	}
 }
 
 func (s *Server) scanView(r *http.Request, result game.ScanResult) map[string]any {
 	ready, missing := game.DragonReady(s.quest, result.Player)
 	return map[string]any{
-		"Quest":    s.quest,
-		"Result":   result,
-		"Player":   result.Player,
-		"Ready":    ready,
-		"Missing":  missing,
-		"ImageURL": s.codeImageURL(result.Code),
+		"Quest":     s.quest,
+		"Result":    result,
+		"Player":    result.Player,
+		"Ready":     ready,
+		"Missing":   missing,
+		"ImageURL":  s.codeImageURL(result.Code),
+		"StatusURL": "/status",
 	}
 }
 
 func (s *Server) combatView(r *http.Request, result game.ScanResult) map[string]any {
 	return map[string]any{
-		"Quest":    s.quest,
-		"Result":   result,
-		"Player":   result.Player,
-		"Combat":   result.Combat,
-		"ImageURL": s.codeImageURL(result.Code),
+		"Quest":         s.quest,
+		"Result":        result,
+		"Player":        result.Player,
+		"Combat":        result.Combat,
+		"ImageURL":      s.codeImageURL(result.Code),
+		"StatusURL":     "/status",
+		"CombatRollURL": "/combat/roll",
 	}
 }
 
