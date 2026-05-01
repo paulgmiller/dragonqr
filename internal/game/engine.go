@@ -45,14 +45,16 @@ func ApplyScan(q *Quest, p *Player, code Code) ScanResult {
 	if p.Health <= 0 && code.Type != CodeHealing && code.Type != CodeStart {
 		result.Blocked = true
 		result.Title = "Find a healer"
-		result.Body = "You are out of health. Find a healer code before continuing."
+		result.Body = "You are out of health. Return to the start or find a healer code before continuing."
 		return result
 	}
 
 	if code.Type == CodeStart {
+		before := p.Health
+		p.Health = p.MaxHealth
 		p.markScanned(code.ID)
 		p.addClue(code.ID, code.Clue)
-		result.Body = "Your adventure is already underway."
+		result.Body = fmt.Sprintf("You returned to the start and healed from %d to %d health.", before, p.Health)
 		return result
 	}
 

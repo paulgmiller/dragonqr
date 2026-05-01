@@ -139,6 +139,37 @@ func TestStatusRestartButtonSaysDifferentPlayer(t *testing.T) {
 	}
 }
 
+func TestStartCodeHealsExistingPlayerToFullHealth(t *testing.T) {
+	app := testServer(t, "")
+	cookie := createPlayerCookie(t, app, "Star Pat")
+	if _, err := app.store.Update(cookie.Value, func(p *game.Player) error {
+		p.Health = 0
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/q/start", nil)
+	req.AddCookie(cookie)
+	rr := httptest.NewRecorder()
+	app.Handler().ServeHTTP(rr, req)
+
+	body := rr.Body.String()
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d: %s", rr.Code, http.StatusOK, body)
+	}
+	if !strings.Contains(body, "healed from 0 to 10 health") {
+		t.Fatal("start code did not show full-heal message")
+	}
+	player, ok := app.store.Get(cookie.Value)
+	if !ok {
+		t.Fatal("expected player to be saved")
+	}
+	if player.Health != player.MaxHealth {
+		t.Fatalf("health = %d, want full health %d", player.Health, player.MaxHealth)
+	}
+}
+
 func TestAdminTestStartCreatesPlayerAndListsCodeLinks(t *testing.T) {
 	app := testServer(t, "")
 	form := url.Values{"adventurer_name": {"Tester"}}
@@ -219,6 +250,99 @@ func TestAdminTestCombatUsesAdminRollRoute(t *testing.T) {
 	}
 	if !strings.Contains(body, `action="/admin/test/combat/roll"`) {
 		t.Fatal("admin test combat page does not post rolls to admin test route")
+	}
+}
+
+func TestAdminTestStartCodeHealsExistingPlayerToFullHealth(t *testing.T) {
+	app := testServer(t, "")
+	cookie := createAdminTestPlayerCookie(t, app)
+	if _, err := app.store.Update(cookie.Value, func(p *game.Player) error {
+		p.Health = 1
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/test/q/start", nil)
+	req.AddCookie(cookie)
+	rr := httptest.NewRecorder()
+	app.Handler().ServeHTTP(rr, req)
+
+	body := rr.Body.String()
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d: %s", rr.Code, http.StatusOK, body)
+	}
+	if !strings.Contains(body, "healed from 1 to 10 health") {
+		t.Fatal("admin test start code did not show full-heal message")
+	}
+	player, ok := app.store.Get(cookie.Value)
+	if !ok {
+		t.Fatal("expected test player to be saved")
+	}
+	if player.Health != player.MaxHealth {
+		t.Fatalf("health = %d, want full health %d", player.Health, player.MaxHealth)
+	}
+}
+
+func TestScanPageShowsPlayerDefeatBanner(t *testing.T) {
+	app := testServer(t, "")
+	req := httptest.NewRequest(http.MethodGet, "/q/dragon", nil)
+	code, _ := app.quest.Code("dragon")
+	player := &game.Player{
+		ID:        "p1",
+		MaxHealth: 10,
+		Health:    0,
+		Attack:    2,
+	}
+	result := game.ScanResult{
+		Code:    code,
+		Player:  player,
+		Title:   "Find a healer",
+		Body:    "Dragon reduced your health to zero.",
+		Blocked: true,
+	}
+
+	var body bytes.Buffer
+	if err := app.tpl.ExecuteTemplate(&body, "scan.html", app.scanView(req, result)); err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(body.String(), "You Fell") {
+		t.Fatal("scan page does not show player defeat banner")
+	}
+	if !strings.Contains(body.String(), "Return to the start or scan a healing code before continuing") {
+		t.Fatal("scan page does not explain how to recover after defeat")
+	}
+}
+
+func TestScanPageShowsEnemyDefeatedBanner(t *testing.T) {
+	app := testServer(t, "")
+	req := httptest.NewRequest(http.MethodGet, "/q/dragon", nil)
+	code, _ := app.quest.Code("dragon")
+	player := &game.Player{
+		ID:        "p1",
+		MaxHealth: 10,
+		Health:    7,
+		Attack:    2,
+	}
+	result := game.ScanResult{
+		Code:     code,
+		Player:   player,
+		Title:    code.Title,
+		Body:     "You defeated Dragon.",
+		Defeated: true,
+	}
+
+	var body bytes.Buffer
+	if err := app.tpl.ExecuteTemplate(&body, "scan.html", app.scanView(req, result)); err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(body.String(), "Enemy Defeated") {
+		t.Fatal("scan page does not show enemy defeated banner")
+	}
+	if !strings.Contains(body.String(), "Dragon is down.") {
+		t.Fatal("scan page does not name the defeated enemy")
 	}
 }
 
@@ -364,6 +488,20 @@ func createAdminTestPlayerCookie(t *testing.T, app *Server) *http.Cookie {
 	t.Helper()
 	form := url.Values{"adventurer_name": {"Tester"}}
 	req := httptest.NewRequest(http.MethodPost, "/admin/test/start", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+	app.Handler().ServeHTTP(rr, req)
+	cookies := rr.Result().Cookies()
+	if len(cookies) == 0 {
+		t.Fatal("expected player cookie")
+	}
+	return cookies[0]
+}
+
+func createPlayerCookie(t *testing.T, app *Server, adventurerName string) *http.Cookie {
+	t.Helper()
+	form := url.Values{"adventurer_name": {adventurerName}}
+	req := httptest.NewRequest(http.MethodPost, "/start", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rr := httptest.NewRecorder()
 	app.Handler().ServeHTTP(rr, req)

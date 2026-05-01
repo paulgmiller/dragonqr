@@ -5,6 +5,26 @@
   <p>{{.Result.Body}}</p>
 </section>
 
+{{if .Result.Victory}}
+<section class="outcome-banner outcome-victory" role="status" aria-live="polite">
+  <span class="outcome-kicker">Dragon Defeated</span>
+  <strong>Quest Complete</strong>
+  <p>{{.Quest.VictoryText}}</p>
+</section>
+{{else if .Result.Defeated}}
+<section class="outcome-banner outcome-victory" role="status" aria-live="polite">
+  <span class="outcome-kicker">Enemy Defeated</span>
+  <strong>{{.Result.Code.Title}} is down.</strong>
+  <p>Rewards have been claimed and the path is clear.</p>
+</section>
+{{else if and .Result.Blocked (le .Player.Health 0)}}
+<section class="outcome-banner outcome-danger" role="alert">
+  <span class="outcome-kicker">You Fell</span>
+  <strong>Health is zero.</strong>
+  <p>Return to the start or scan a healing code before continuing the quest.</p>
+</section>
+{{end}}
+
 {{if .ImageURL}}
 <section class="station-visual">
   <img src="{{.ImageURL}}" alt="">

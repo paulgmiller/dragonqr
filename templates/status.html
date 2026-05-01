@@ -29,9 +29,10 @@
 {{end}}
 
 {{if le .Player.Health 0}}
-<section class="panel warning">
-  <h2>Find a Healer</h2>
-  <p>Your health is zero. Scan a healing code before continuing the quest.</p>
+<section class="outcome-banner outcome-danger" role="alert">
+  <span class="outcome-kicker">You Fell</span>
+  <strong>Find a Healer</strong>
+  <p>Your health is zero. Return to the start or scan a healing code before continuing the quest.</p>
 </section>
 {{end}}
 

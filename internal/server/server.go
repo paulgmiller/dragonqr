@@ -99,8 +99,19 @@ func (s *Server) handleCode(w http.ResponseWriter, r *http.Request) {
 	}
 	if code.Type == game.CodeStart {
 		if p, ok := s.currentPlayer(r); ok {
-			slog.Info("start code scanned by existing player", "player_id", p.ID, "code_id", code.ID)
-			s.render(w, "status.html", s.statusView(r, p, "Your adventure is already started."))
+			var result game.ScanResult
+			playerID := p.ID
+			p, err := s.store.Update(playerID, func(p *game.Player) error {
+				result = game.ApplyScan(s.quest, p, code)
+				return nil
+			})
+			if err != nil {
+				slog.Error("failed to save start scan progress", "error", err, "player_id", playerID, "code_id", code.ID)
+				http.Error(w, "Could not save quest progress.", http.StatusInternalServerError)
+				return
+			}
+			slog.Info("start code scanned by existing player", "player_id", p.ID, "code_id", code.ID, "health", p.Health, "max_health", p.MaxHealth)
+			s.render(w, "status.html", s.statusView(r, p, result.Body))
 			return
 		}
 		slog.Info("start code scanned", "code_id", code.ID)

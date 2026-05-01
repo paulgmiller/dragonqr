@@ -119,6 +119,24 @@ func TestCombatDefeatRequiresHealingCode(t *testing.T) {
 	}
 }
 
+func TestStartScanHealsToFullHealth(t *testing.T) {
+	q := testQuest()
+	if err := q.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	p := &Player{ID: "p1", MaxHealth: 10, Health: 0, Attack: 2}
+	start, _ := q.Code("start")
+
+	result := ApplyScan(&q, p, start)
+
+	if result.Blocked {
+		t.Fatal("start scan was blocked at zero health")
+	}
+	if p.Health != p.MaxHealth {
+		t.Fatalf("health = %d, want full health %d", p.Health, p.MaxHealth)
+	}
+}
+
 func TestInventoryDisplaysCurrentTitlesFromStableIDs(t *testing.T) {
 	q := testQuest()
 	if err := q.Validate(); err != nil {
