@@ -150,3 +150,82 @@ func TestInventoryDisplaysCurrentTitlesFromStableIDs(t *testing.T) {
 		t.Fatalf("CompanionNames = %#v, want renamed friend", companions)
 	}
 }
+
+func TestSampleQuestCombatGateAndBalance(t *testing.T) {
+	q, err := LoadQuest("../../quest.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	noGear := &Player{ID: "p1", MaxHealth: q.BaseHealth, Health: q.BaseHealth, Attack: q.BaseAttack, Armor: q.BaseArmor}
+	wolf, _ := q.Code("ash-wolf")
+	result := ApplyScan(q, noGear, wolf)
+	if result.Combat == nil {
+		t.Fatal("wolf scan did not start combat")
+	}
+	for noGear.Combat != nil {
+		result, err = RollCombatWithRolls(q, noGear, 6, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if noGear.HasDefeated("ash-wolf") {
+		t.Fatal("wolf can be defeated without gear")
+	}
+	if !result.Blocked {
+		t.Fatal("wolf should reduce an ungeared player to zero health")
+	}
+
+	ready, _ := DragonReady(q, &Player{ID: "p2", MaxHealth: q.BaseHealth, Health: q.BaseHealth, Attack: q.BaseAttack, Armor: q.BaseArmor})
+	if ready {
+		t.Fatal("dragon is ready without endgame gear")
+	}
+
+	fullGearPlayer := func(id string) *Player {
+		return &Player{
+			ID:        id,
+			MaxHealth: 16,
+			Health:    16,
+			Attack:    9,
+			Armor:     5,
+			Companions: []string{
+				"pixie-companion",
+				"knight-companion",
+			},
+			Defeated: []string{
+				"cave-bat",
+				"bridge-troll",
+				"ash-wolf",
+			},
+		}
+	}
+	fullGear := fullGearPlayer("p3")
+	ready, missing := DragonReady(q, fullGear)
+	if !ready {
+		t.Fatalf("full gear should be dragon-ready, missing %q", missing)
+	}
+
+	dragon, _ := q.Code(q.DragonCode)
+	ApplyScan(q, fullGear, dragon)
+	for fullGear.Combat != nil {
+		result, err = RollCombatWithRolls(q, fullGear, 1, 6)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if fullGear.DragonDefeated {
+		t.Fatal("dragon should not be guaranteed with full gear and poor rolls")
+	}
+
+	fullGear = fullGearPlayer("p4")
+	ApplyScan(q, fullGear, dragon)
+	for fullGear.Combat != nil {
+		result, err = RollCombatWithRolls(q, fullGear, 6, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if !fullGear.DragonDefeated || !result.Victory {
+		t.Fatal("dragon should be beatable with full gear and strong rolls")
+	}
+}

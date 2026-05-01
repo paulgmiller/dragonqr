@@ -18,8 +18,19 @@
   <div><span>Enemy Health</span><strong>{{.Combat.EnemyHealth}}</strong></div>
 </section>
 
-<form method="post" action="/combat/roll" class="actions">
-  <button type="submit">Roll</button>
+<section class="dice-board" aria-label="Dice rolls">
+  <div class="die-card">
+    <span>You</span>
+    <strong class="die">{{if .Result.LastRound}}{{.Result.LastRound.PlayerRoll}}{{else}}?{{end}}</strong>
+  </div>
+  <div class="die-card enemy-die">
+    <span>Enemy</span>
+    <strong class="die">{{if .Result.LastRound}}{{.Result.LastRound.EnemyRoll}}{{else}}?{{end}}</strong>
+  </div>
+</section>
+
+<form method="post" action="/combat/roll" class="actions combat-roll-form">
+  <button type="submit">Roll Dice</button>
   <a class="button secondary" href="/status">Status</a>
 </form>
 
@@ -33,4 +44,20 @@
   </ol>
 </section>
 {{end}}
+<script>
+(() => {
+  const form = document.querySelector(".combat-roll-form");
+  if (!form) return;
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    document.body.classList.add("rolling");
+    const button = form.querySelector("button");
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Rolling...";
+    }
+    window.setTimeout(() => form.submit(), 700);
+  });
+})();
+</script>
 {{template "foot" .}}

@@ -107,6 +107,11 @@ button,
   text-decoration: none;
 }
 
+button:disabled {
+  cursor: wait;
+  opacity: 0.75;
+}
+
 .actions {
   display: flex;
   gap: 12px;
@@ -252,6 +257,55 @@ code {
   margin: 16px 0;
 }
 
+.dice-board {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 140px));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.die-card {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  text-align: center;
+}
+
+.die-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.die {
+  display: grid;
+  place-items: center;
+  width: 68px;
+  height: 68px;
+  margin: 8px auto 0;
+  border: 3px solid var(--ink);
+  border-radius: 8px;
+  background: #fffaf2;
+  color: var(--ink);
+  font-size: 2rem;
+  line-height: 1;
+  box-shadow: 0 4px 0 rgba(32, 28, 24, 0.18);
+  animation: die-land 360ms ease-out;
+}
+
+.enemy-die .die {
+  border-color: var(--accent-dark);
+  color: var(--accent-dark);
+}
+
+.rolling .die {
+  animation: die-roll 140ms linear infinite;
+}
+
 .rounds {
   padding-left: 1.3rem;
 }
@@ -303,8 +357,43 @@ code {
     grid-template-columns: 1fr;
   }
 
+  .dice-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .print-title {
     display: block;
+  }
+}
+
+@keyframes die-roll {
+  0% {
+    transform: rotate(0deg) translateY(0);
+  }
+  50% {
+    transform: rotate(12deg) translateY(-8px);
+  }
+  100% {
+    transform: rotate(-12deg) translateY(0);
+  }
+}
+
+@keyframes die-land {
+  0% {
+    transform: scale(0.88) rotate(-10deg);
+  }
+  70% {
+    transform: scale(1.08) rotate(4deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .die,
+  .rolling .die {
+    animation: none;
   }
 }
 

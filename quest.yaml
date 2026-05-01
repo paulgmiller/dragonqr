@@ -6,9 +6,9 @@ base_health: 10
 base_attack: 2
 base_armor: 0
 dragon_requirements:
-  min_attack: 7
-  min_armor: 3
-  min_companions: 1
+  min_attack: 9
+  min_armor: 5
+  min_companions: 2
   defeated:
     - cave-bat
     - bridge-troll
@@ -41,7 +41,7 @@ codes:
     clue: "Look where water would cross if this were a tiny kingdom."
     organizer_note: "Place somewhere dim or under a table."
     enemy:
-      health: 6
+      health: 10
       attack: 2
       armor: 0
     rewards:
@@ -76,7 +76,7 @@ codes:
     clue: "Search where something warm might be brewed."
     organizer_note: "Place near stairs, a hallway, or a threshold."
     enemy:
-      health: 9
+      health: 18
       attack: 3
       armor: 1
     rewards:
@@ -101,9 +101,9 @@ codes:
     clue: "Seek the helm where coats or cloaks sleep."
     organizer_note: "Place near a door, cabinet, or gate."
     enemy:
-      health: 10
+      health: 24
       attack: 4
-      armor: 1
+      armor: 2
     rewards:
       armor: 1
 
@@ -147,7 +147,6 @@ codes:
     clue: "This is the final battle."
     organizer_note: "Place at the final destination."
     enemy:
-      health: 18
-      attack: 5
-      armor: 2
-
+      health: 45
+      attack: 4
+      armor: 5
