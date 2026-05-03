@@ -6,7 +6,7 @@ base_health: 10
 base_attack: 2
 base_armor: 0
 dragon_requirements:
-  min_attack: 9
+  min_attack: 8
   min_armor: 5
   min_companions: 2
   defeated:
