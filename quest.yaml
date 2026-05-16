@@ -1,10 +1,11 @@
-title: "Dragon of Ember Hollow"
-intro: "A dragon has curled around Ember Hollow's old watchtower. Gather courage, friends, and enchanted gear before facing it."
+title: "Neon War for Sector Ember"
+intro: "A rogue AI war machine has seized the Ember Sector watchtower. Recruit pilots, upgrade your combat rig, and gather futuristic weapons before facing it."
 start_code: start
 dragon_code: ember-dragon
 base_health: 10
 base_attack: 2
 base_armor: 0
+
 dragon_requirements:
   min_attack: 8
   min_armor: 5
@@ -13,32 +14,34 @@ dragon_requirements:
     - cave-bat
     - bridge-troll
     - ash-wolf
-victory_text: "The dragon lowers its head, beaten but alive, and promises to guard Ember Hollow instead of frightening it."
+
+victory_text: "The Overlord Titan powers down, its red optic fading to blue as it agrees to defend Ember Sector instead of destroying it."
+
 codes:
   - id: start
     type: start
-    title: "The Adventurer's Oath"
+    title: "Pilot Registration"
     label: "Start Here"
-    description: "Choose your adventurer name and begin the quest."
-    clue: "Seek the glimmer where old stories are kept."
+    description: "Choose your pilot callsign and enter the neon battlefield."
+    clue: "Seek the glowing data beacon where old legends are uploaded."
     organizer_note: "Place this at the entrance or check-in table."
 
   - id: silver-sword
     type: weapon
-    title: "Silverleaf Sword"
+    title: "VX Plasma Missile Launcher"
     label: "Weapon"
-    description: "A bright blade hums in your hand."
-    clue: "The dragon likes to cool his breath at the stream"
-    organizer_note: "on second hill"
+    description: "A heavy plasma launcher hums with charged missile pods and glowing reactor coils."
+    clue: "The war machine cools its reactor systems near the stream."
+    organizer_note: "On second hill"
     effects:
       attack: 3
 
   - id: cave-bat
     type: enemy
-    title: "Cave Bat Swarm"
+    title: "Hyper Bats"
     label: "Enemy"
-    description: "A cloud of squeaking bats swoops from the dark."
-    clue: "A fancy hat is closer to home"
+    description: "Mechanical bats swarm overhead, firing red laser beams from their glowing eyes."
+    clue: "An old pilot's visor is hidden closer to home."
     organizer_note: "At tree house"
     enemy:
       health: 10
@@ -49,31 +52,31 @@ codes:
 
   - id: oak-shield
     type: armor
-    title: "Oakguard Shield"
+    title: "NanoShield Barrier"
     label: "Armor"
-    description: "The shield is light, sturdy, and warm as summer bark."
-    clue: "A helper waits where soft things rest."
-    organizer_note: "in the trees"
+    description: "An advanced energy shield projects a glowing blue defensive barrier around its user."
+    clue: "A support drone waits where soft things rest."
+    organizer_note: "In the trees"
     effects:
       armor: 2
 
   - id: pixie-companion
     type: companion
-    title: "Mira the Lantern Pixie"
+    title: "XR-7 Wing Drone"
     label: "Companion"
-    description: "Mira promises to sparkle fiercely beside you."
-    clue: "Bats have taken over the old tree house"
-    organizer_note: "fence at new neighorbood"
+    description: "A nimble combat drone inspired by classic starfighters zips into formation beside you."
+    clue: "The Hyper Bats have overtaken the abandoned outpost."
+    organizer_note: "Fence at new neighborhood"
     effects:
       attack: 1
       health: 1
 
   - id: bridge-troll
     type: enemy
-    title: "Grumblebridge Troll"
+    title: "Mad Cat Assault Mech"
     label: "Enemy"
-    description: "A grumpy troll stamps its feet and demands a duel."
-    clue: "A knight has gone wandering to the baseball field and rested under a large tree"
+    description: "A towering Mad Cat mech stomps through the battlefield with missile pods and PPC cannons blazing."
+    clue: "A crashed mech pilot was spotted near the giant tree by the baseball field."
     organizer_note: "At the big bridge"
     enemy:
       health: 18
@@ -85,20 +88,20 @@ codes:
 
   - id: healing-potion
     type: healing
-    title: "Rubyberry Potion"
+    title: "Nanite Repair Canister"
     label: "Healing"
-    description: "The potion tastes like berries and bravery."
-    clue: "The wolf of ash prowls the circle fork."
+    description: "Clouds of repair nanites rebuild damaged armor plating and restore systems."
+    clue: "The cyber wolf stalks the lower sector fork."
     organizer_note: "On way down to creek"
     effects:
       health: 5
 
   - id: ash-wolf
     type: enemy
-    title: "Ash-Furred Wolf"
+    title: "Cyber Fang Wolf"
     label: "Enemy"
-    description: "The wolf's paws leave tiny sparks as it circles."
-    clue: "The silver sword is on the way home"
+    description: "A robotic wolf with chrome claws and burning optic sensors prowls the shadows."
+    clue: "A hidden plasma blade lies along the route home."
     organizer_note: "At the creek circle start"
     enemy:
       health: 24
@@ -109,10 +112,10 @@ codes:
 
   - id: star-helm
     type: armor
-    title: "Starforged Helm"
+    title: "NeuroLink Visor Helmet"
     label: "Armor"
-    description: "Starlight flashes across the helm when you put it on."
-    clue: "There are pixies nearby"
+    description: "The visor overlays tactical targeting systems and enemy threat analysis across your vision."
+    clue: "Friendly drones patrol nearby."
     organizer_note: "Just cross first bridge"
     effects:
       armor: 1
@@ -120,20 +123,20 @@ codes:
 
   - id: knight-companion
     type: companion
-    title: "Sir Button the Brave"
+    title: "Ace Pilot Nova"
     label: "Companion"
-    description: "A tiny knight salutes and joins your quest."
-    clue: "When you feel ready, find the dragon in its tower."
-    organizer_note: "Place near party supplies, music, or games."
+    description: "A legendary arcade pilot in retro mech armor joins your squadron for the final mission."
+    clue: "When fully upgraded, seek the Titan mech in its tower."
+    organizer_note: "Place near party supplies, music, or arcade games."
     effects:
       attack: 1
       armor: 1
 
   - id: ember-dragon
     type: dragon
-    title: "The Ember Dragon"
-    label: "Final Dragon"
-    description: "The great dragon spreads its wings over Ember Hollow."
+    title: "The Ember Overlord Titan"
+    label: "Final Boss"
+    description: "A skyscraper-sized war mech towers above Ember Sector, glowing with molten circuitry and plasma cannons."
     clue: "This is the final battle."
     organizer_note: "Place at the final destination."
     enemy:
