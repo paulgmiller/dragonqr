@@ -33,7 +33,11 @@ type adminTestNav struct {
 }
 
 func (s *Server) handleAdminTest(w http.ResponseWriter, r *http.Request) {
-	p, ok := s.currentPlayer(r)
+	p, ok, err := s.currentPlayer(r)
+	if err != nil {
+		http.Error(w, "Could not load quest progress.", http.StatusInternalServerError)
+		return
+	}
 	data := map[string]any{
 		"Quest":     s.quest,
 		"Player":    p,
@@ -71,7 +75,12 @@ func (s *Server) handleAdminTestStart(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleAdminTestRestart(w http.ResponseWriter, r *http.Request) {
-	if p, ok := s.currentPlayer(r); ok {
+	p, ok, err := s.currentPlayer(r)
+	if err != nil {
+		http.Error(w, "Could not load quest progress.", http.StatusInternalServerError)
+		return
+	}
+	if ok {
 		slog.Info("admin test restart requested", "player_id", p.ID)
 	}
 	http.SetCookie(w, &http.Cookie{
@@ -92,7 +101,11 @@ func (s *Server) handleAdminTestCode(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	p, ok := s.currentPlayer(r)
+	p, ok, err := s.currentPlayer(r)
+	if err != nil {
+		http.Error(w, "Could not load quest progress.", http.StatusInternalServerError)
+		return
+	}
 	if !ok {
 		http.Redirect(w, r, "/admin/test", http.StatusSeeOther)
 		return
@@ -118,7 +131,6 @@ func (s *Server) handleAdminTestCode(w http.ResponseWriter, r *http.Request) {
 
 	playerID := p.ID
 	var result game.ScanResult
-	var err error
 	p, err = s.store.Update(playerID, func(p *game.Player) error {
 		result = game.ApplyScan(s.quest, p, code)
 		return nil
@@ -151,7 +163,11 @@ func (s *Server) handleAdminTestCode(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleAdminTestCombatRoll(w http.ResponseWriter, r *http.Request) {
-	p, ok := s.currentPlayer(r)
+	p, ok, err := s.currentPlayer(r)
+	if err != nil {
+		http.Error(w, "Could not load quest progress.", http.StatusInternalServerError)
+		return
+	}
 	if !ok {
 		http.Redirect(w, r, "/admin/test", http.StatusSeeOther)
 		return
@@ -162,7 +178,6 @@ func (s *Server) handleAdminTestCombatRoll(w http.ResponseWriter, r *http.Reques
 		currentID = p.Combat.CodeID
 	}
 	var result game.ScanResult
-	var err error
 	p, err = s.store.Update(playerID, func(p *game.Player) error {
 		var rollErr error
 		result, rollErr = game.RollCombat(s.quest, p)

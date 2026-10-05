@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -26,12 +27,14 @@ func main() {
 func run() error {
 	var addr string
 	var questPath string
-	var dataPath string
+	var database string
+	var importPlayers string
 	var baseURL string
 
 	flag.StringVar(&addr, "addr", ":8080", "HTTP listen address")
 	flag.StringVar(&questPath, "quest", "quest.yaml", "quest YAML file")
-	flag.StringVar(&dataPath, "data", "data/players.json", "player JSON data file")
+	flag.StringVar(&database, "database", defaultDatabase(), "SQLite filename or PostgreSQL connection URL (DRAGONQR_DATABASE)")
+	flag.StringVar(&importPlayers, "import-players", "", "import legacy player JSON into SQL without overwriting existing players")
 	flag.StringVar(&baseURL, "base-url", "", "public base URL for printed QR codes")
 	flag.Parse()
 	if baseURL == "" {
@@ -42,9 +45,15 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	store, err := game.NewStore(dataPath)
+	store, err := game.NewStore(database)
 	if err != nil {
 		return err
+	}
+	defer store.Close()
+	if importPlayers != "" {
+		if err := store.ImportJSON(importPlayers); err != nil {
+			return err
+		}
 	}
 	app, err := server.New(q, store, server.Config{
 		Addr:              addr,
@@ -78,7 +87,7 @@ func run() error {
 		"addr", addr,
 		"url", listenerURL(addr),
 		"quest", questPath,
-		"data", dataPath,
+		"database_driver", databaseDriver(database),
 		"base_url_configured", baseURL != "",
 		"organizer_auth_enabled", os.Getenv("ORGANIZER_PASSWORD") != "",
 		"image_generation_enabled", os.Getenv("OPENAI_API_KEY") != "",
@@ -96,4 +105,23 @@ func listenerURL(addr string) string {
 		return "http://localhost" + addr
 	}
 	return "http://" + addr
+}
+
+const clusterDatabase = "postgresql://root@cockroachdb-public.cockroach.svc.cluster.local:26257/dragonqr?sslmode=disable"
+
+func defaultDatabase() string {
+	if database := os.Getenv("DRAGONQR_DATABASE"); database != "" {
+		return database
+	}
+	if os.Getenv("KUBERNETES_SERVICE_HOST") != "" {
+		return clusterDatabase
+	}
+	return "data/players.db"
+}
+
+func databaseDriver(database string) string {
+	if strings.HasPrefix(database, "postgresql://") || strings.HasPrefix(database, "postgres://") {
+		return "postgres"
+	}
+	return "sqlite"
 }

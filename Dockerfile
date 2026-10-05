@@ -1,12 +1,14 @@
 FROM golang:1.24-alpine AS build
 
+RUN apk add --no-cache gcc musl-dev
+
 WORKDIR /src
 
 COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/dragonqr ./cmd/dragonqr
+RUN CGO_ENABLED=1 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/dragonqr ./cmd/dragonqr
 
 FROM alpine:3.21
 
@@ -26,5 +28,5 @@ USER dragonqr
 EXPOSE 8080
 
 ENTRYPOINT ["/app/dragonqr"]
-CMD ["-addr", "0.0.0.0:8080", "-quest", "/app/quest.yaml", "-data", "/app/data/players.json"]
+CMD ["-addr", "0.0.0.0:8080", "-quest", "/app/quest.yaml", "-database", "/app/data/players.db"]
 

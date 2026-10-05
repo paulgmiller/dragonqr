@@ -1,5 +1,6 @@
 .git
-data/players.json
+data/*
+!data/.gitkeep
 tmp
 *.log
 

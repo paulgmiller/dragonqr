@@ -161,8 +161,8 @@ func TestStartCodeHealsExistingPlayerToFullHealth(t *testing.T) {
 	if !strings.Contains(body, "healed from 0 to 10 health") {
 		t.Fatal("start code did not show full-heal message")
 	}
-	player, ok := app.store.Get(cookie.Value)
-	if !ok {
+	player, err := app.store.Get(cookie.Value)
+	if err != nil {
 		t.Fatal("expected player to be saved")
 	}
 	if player.Health != player.MaxHealth {
@@ -226,8 +226,8 @@ func TestAdminTestWalksQuestCodeWithoutQRCode(t *testing.T) {
 	if !strings.Contains(body, "Admin Test Walkthrough") {
 		t.Fatal("admin test navigation was not included on code page")
 	}
-	player, ok := app.store.Get(cookie.Value)
-	if !ok {
+	player, err := app.store.Get(cookie.Value)
+	if err != nil {
 		t.Fatal("expected test player to be saved")
 	}
 	if player.Attack != 4 {
@@ -275,8 +275,8 @@ func TestAdminTestStartCodeHealsExistingPlayerToFullHealth(t *testing.T) {
 	if !strings.Contains(body, "healed from 1 to 10 health") {
 		t.Fatal("admin test start code did not show full-heal message")
 	}
-	player, ok := app.store.Get(cookie.Value)
-	if !ok {
+	player, err := app.store.Get(cookie.Value)
+	if err != nil {
 		t.Fatal("expected test player to be saved")
 	}
 	if player.Health != player.MaxHealth {
@@ -452,6 +452,22 @@ func TestQRDataURLUsesHighestRecoveryLevel(t *testing.T) {
 	}
 }
 
+func TestDatabaseReadFailureReturnsServerError(t *testing.T) {
+	app := testServer(t, "")
+	if err := app.store.Close(); err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{"/", "/status", "/q/start", "/q/sword", "/admin/test"} {
+		r := httptest.NewRequest(http.MethodGet, path, nil)
+		r.AddCookie(&http.Cookie{Name: "dragonqr_player", Value: "saved-player"})
+		w := httptest.NewRecorder()
+		app.Handler().ServeHTTP(w, r)
+		if w.Code != http.StatusInternalServerError {
+			t.Fatalf("%s status = %d; want 500", path, w.Code)
+		}
+	}
+}
+
 func testServer(t *testing.T, password string) *Server {
 	t.Helper()
 	q := game.Quest{
@@ -470,10 +486,11 @@ func testServer(t *testing.T, password string) *Server {
 	if err := q.Validate(); err != nil {
 		t.Fatal(err)
 	}
-	store, err := game.NewStore(t.TempDir() + "/players.json")
+	store, err := game.NewStore(t.TempDir() + "/players.db")
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() { store.Close() })
 	app, err := New(&q, store, Config{
 		OrganizerPassword: password,
 		GeneratedImageDir: t.TempDir(),
