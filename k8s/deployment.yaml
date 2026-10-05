@@ -31,9 +31,9 @@ spec:
             - "$(DRAGONQR_BASE_URL)"
             - "-quest"
             - "/app/quest.yaml"
-            - "-data"
-            - "/app/data/players.json"
           env:
+            - name: DRAGONQR_DATABASE
+              value: "postgresql://root@cockroachdb-public.cockroach.svc.cluster.local:26257/dragonqr?sslmode=disable"
             - name: DRAGONQR_BASE_URL
               value: "https://dragon.northbriton.net"
             - name: ORGANIZER_PASSWORD

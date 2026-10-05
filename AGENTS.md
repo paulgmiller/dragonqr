@@ -20,7 +20,9 @@ The app renders server-side HTML with Go `html/template`. There is no frontend b
 - Starting a player only requires `adventurer_name`; the real-name field was intentionally removed from the UI.
 - Player identity is a browser cookie named `dragonqr_player`.
 - `POST /restart` clears only the current browser cookie and redirects back to the start code. It does not delete saved player records.
-- Player progress is stored in `data/players.json`.
+- Player progress uses GORM/SQL: SQLite at `data/players.db` locally and CockroachDB in Kubernetes.
+- `-database` or `DRAGONQR_DATABASE` overrides the database; cluster default is `postgresql://root@cockroachdb-public.cockroach.svc.cluster.local:26257/dragonqr?sslmode=disable`.
+- `-import-players` imports legacy JSON without overwriting existing SQL rows or changing the source file.
 - Organizer pages:
   - `/organizer`
   - `/organizer/print`
@@ -34,7 +36,7 @@ The app renders server-side HTML with Go `html/template`. There is no frontend b
 - Printable cards are intentionally reusable: they should show only stable IDs and QR codes, not station art, story titles, placement notes, or visible raw URLs.
 - QR payloads still point at `/q/{codeID}`; changing a code `id` or `DRAGONQR_BASE_URL` still requires reprinting.
 - Player progress should be durable across title/description changes. Store and compare stable code IDs where possible; render current display names from `quest.yaml`.
-- Existing player JSON may contain older title-backed `items` or `companions`. Keep compatibility when changing player display logic.
+- Imported legacy players may contain older title-backed `items` or `companions`. Keep compatibility when changing player display logic.
 - Enemy and dragon scans start or resume a tap-to-roll combat flow. Do not resolve combat immediately inside the scan handler.
 - If player health reaches `0`, normal scans are blocked until the player scans a `healing` code.
 
@@ -54,9 +56,7 @@ The app renders server-side HTML with Go `html/template`. There is no frontend b
 - Public origin is configured with `DRAGONQR_BASE_URL`.
 - The ingress host is `dragon.northbriton.net`.
 - Use `kubectl apply -f k8s/`; there is intentionally no `kustomization.yaml`.
-- The deployment must stay at `replicas: 1` while storage is a single JSON file on a PVC.
-
-Do not scale to multiple replicas without replacing JSON-file persistence or adding safe cross-process storage. A second pod can corrupt or overwrite progress.
+- Keep the deployment at `replicas: 1` while the retained legacy `ReadWriteOnce` PVC is mounted. Player progress now uses CockroachDB with version-checked updates.
 
 ## Local Commands
 

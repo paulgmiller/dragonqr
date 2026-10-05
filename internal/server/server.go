@@ -73,7 +73,12 @@ func (s *Server) handleStatic(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
-	if p, ok := s.currentPlayer(r); ok {
+	p, ok, err := s.currentPlayer(r)
+	if err != nil {
+		http.Error(w, "Could not load quest progress.", http.StatusInternalServerError)
+		return
+	}
+	if ok {
 		s.render(w, "status.html", s.statusView(r, p, ""))
 		return
 	}
@@ -81,7 +86,11 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
-	p, ok := s.currentPlayer(r)
+	p, ok, err := s.currentPlayer(r)
+	if err != nil {
+		http.Error(w, "Could not load quest progress.", http.StatusInternalServerError)
+		return
+	}
 	if !ok {
 		http.Redirect(w, r, "/q/"+url.PathEscape(s.quest.StartCode), http.StatusSeeOther)
 		return
@@ -98,10 +107,15 @@ func (s *Server) handleCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if code.Type == game.CodeStart {
-		if p, ok := s.currentPlayer(r); ok {
+		p, ok, err := s.currentPlayer(r)
+		if err != nil {
+			http.Error(w, "Could not load quest progress.", http.StatusInternalServerError)
+			return
+		}
+		if ok {
 			var result game.ScanResult
 			playerID := p.ID
-			p, err := s.store.Update(playerID, func(p *game.Player) error {
+			p, err = s.store.Update(playerID, func(p *game.Player) error {
 				result = game.ApplyScan(s.quest, p, code)
 				return nil
 			})
@@ -122,20 +136,24 @@ func (s *Server) handleCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p, ok := s.currentPlayer(r)
+	p, ok, err := s.currentPlayer(r)
+	if err != nil {
+		http.Error(w, "Could not load quest progress.", http.StatusInternalServerError)
+		return
+	}
 	if !ok {
 		slog.Info("code scan without player", "code_id", code.ID, "code_type", code.Type)
 		http.Redirect(w, r, "/q/"+url.PathEscape(s.quest.StartCode), http.StatusSeeOther)
 		return
 	}
 	var result game.ScanResult
-	var err error
-	p, err = s.store.Update(p.ID, func(p *game.Player) error {
+	playerID := p.ID
+	p, err = s.store.Update(playerID, func(p *game.Player) error {
 		result = game.ApplyScan(s.quest, p, code)
 		return nil
 	})
 	if err != nil {
-		slog.Error("failed to save scan progress", "error", err, "player_id", p.ID, "code_id", code.ID)
+		slog.Error("failed to save scan progress", "error", err, "player_id", playerID, "code_id", code.ID)
 		http.Error(w, "Could not save quest progress.", http.StatusInternalServerError)
 		return
 	}
@@ -162,26 +180,30 @@ func (s *Server) handleCode(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleCombatRoll(w http.ResponseWriter, r *http.Request) {
-	p, ok := s.currentPlayer(r)
+	p, ok, err := s.currentPlayer(r)
+	if err != nil {
+		http.Error(w, "Could not load quest progress.", http.StatusInternalServerError)
+		return
+	}
 	if !ok {
 		slog.Info("combat roll without player")
 		http.Redirect(w, r, "/q/"+url.PathEscape(s.quest.StartCode), http.StatusSeeOther)
 		return
 	}
 	var result game.ScanResult
-	var err error
-	p, err = s.store.Update(p.ID, func(p *game.Player) error {
+	playerID := p.ID
+	p, err = s.store.Update(playerID, func(p *game.Player) error {
 		var rollErr error
 		result, rollErr = game.RollCombat(s.quest, p)
 		return rollErr
 	})
 	if errors.Is(err, game.ErrNoActiveCombat) {
-		slog.Info("combat roll without active combat", "player_id", p.ID)
+		slog.Info("combat roll without active combat", "player_id", playerID)
 		http.Redirect(w, r, "/status", http.StatusSeeOther)
 		return
 	}
 	if err != nil {
-		slog.Error("failed to save combat progress", "error", err, "player_id", p.ID)
+		slog.Error("failed to save combat progress", "error", err, "player_id", playerID)
 		http.Error(w, "Could not save combat progress.", http.StatusInternalServerError)
 		return
 	}
@@ -263,7 +285,12 @@ func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleRestart(w http.ResponseWriter, r *http.Request) {
-	if p, ok := s.currentPlayer(r); ok {
+	p, ok, err := s.currentPlayer(r)
+	if err != nil {
+		http.Error(w, "Could not load quest progress.", http.StatusInternalServerError)
+		return
+	}
+	if ok {
 		slog.Info("player restart requested", "player_id", p.ID)
 	} else {
 		slog.Info("player restart requested without active player")
@@ -305,12 +332,20 @@ func (s *Server) handlePrint(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *Server) currentPlayer(r *http.Request) (*game.Player, bool) {
+func (s *Server) currentPlayer(r *http.Request) (*game.Player, bool, error) {
 	cookie, err := r.Cookie("dragonqr_player")
 	if err != nil || cookie.Value == "" {
-		return nil, false
+		return nil, false, nil
 	}
-	return s.store.Get(cookie.Value)
+	p, err := s.store.Get(cookie.Value)
+	if errors.Is(err, game.ErrPlayerNotFound) {
+		return nil, false, nil
+	}
+	if err != nil {
+		slog.Error("failed to load player", "error", err, "player_id", cookie.Value)
+		return nil, false, err
+	}
+	return p, true, nil
 }
 
 func (s *Server) statusView(r *http.Request, p *game.Player, message string) map[string]any {

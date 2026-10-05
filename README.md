@@ -4,7 +4,7 @@
 
 Dragon QR Quest is a simple Go webserver for running a kid-friendly fantasy scavenger hunt. Players scan QR codes, create an adventurer, collect weapons and armor, meet companions, fight smaller enemies, follow clues, and eventually face the final dragon.
 
-The game is designed for a small in-person event. Version 1 uses one browser/device per player and stores progress in a local JSON file. Multiplayer and cross-device accounts can come later.
+The game is designed for a small in-person event. The app uses one browser/device per player and stores progress in SQL through GORM: SQLite locally and CockroachDB in Kubernetes. Multiplayer and cross-device accounts can come later.
 
 ## Quick Start
 
@@ -176,17 +176,35 @@ Use smaller numbers for younger kids and shorter games. If players get stuck bef
 - `internal/server`: HTTP handlers and QR generation.
 - `templates`: HTML pages.
 - `static/style.css`: Styling.
-- `data/players.json`: Created at runtime to store player progress.
+- `data/players.db`: SQLite database created at runtime for local player progress.
 
-## Resetting Progress
+## Player Storage
 
-Stop the server and delete `data/players.json`:
+Local runs default to SQLite at `data/players.db`. The schema is created automatically at startup. Building or running locally requires CGO and a C compiler for the SQLite driver; the Docker build installs these dependencies.
+
+Override storage with `-database` or `DRAGONQR_DATABASE` (the flag takes precedence):
 
 ```sh
-rm data/players.json
+go run ./cmd/dragonqr -database data/another-quest.db
 ```
 
-The next run will start with no saved players.
+In Kubernetes (`KUBERNETES_SERVICE_HOST` is set), the default is:
+
+```text
+postgresql://root@cockroachdb-public.cockroach.svc.cluster.local:26257/dragonqr?sslmode=disable
+```
+
+The deployment explicitly sets this URL in `DRAGONQR_DATABASE`. The `dragonqr` database must already exist on CockroachDB; the app creates the player table. Player updates use GORM’s `optimisticlock` plugin and retry concurrent changes to avoid overwriting progress.
+
+To preserve progress from the old JSON store, stop the old server and start the new version with:
+
+```sh
+go run ./cmd/dragonqr -import-players data/players.json
+```
+
+For CockroachDB, also provide its URL through `-database` or `DRAGONQR_DATABASE`. In Kubernetes, the existing data volume remains mounted at `/app/data`; add `-import-players /app/data/players.json` to the deployment args for migration and remove those args afterward. Import keeps player IDs (and existing browser cookies), combat, rewards, and clues. It leaves the original JSON file untouched and skips any player IDs already in SQL, so rerunning it does not overwrite newer progress. Legacy JSON is only imported when explicitly requested.
+
+To reset local progress, stop the server and remove `data/players.db` (and any `data/players.db-wal` / `data/players.db-shm` sidecars). For CockroachDB, resetting requires clearing the `players` table in the configured database.
 
 ## Deployment Notes
 
@@ -216,7 +234,7 @@ docker run --rm -p 8097:8080 \
   -addr 0.0.0.0:8080 \
   -base-url http://127.0.0.1:8097 \
   -quest /app/quest.yaml \
-  -data /app/data/players.json
+  -database /app/data/players.db
 ```
 
 ## Kubernetes
@@ -224,7 +242,7 @@ docker run --rm -p 8097:8080 \
 Kubernetes manifests live in `k8s/` and target the `dragon` namespace. They include:
 
 - `namespace.yaml`: Creates the `dragon` namespace.
-- `pvc.yaml`: Stores `data/players.json` so player progress survives pod restarts.
+- `pvc.yaml`: Retains the legacy data volume for importing existing JSON progress; SQL player storage uses CockroachDB.
 - `deployment.yaml`: Runs one `dragonqr` pod.
 - `service.yaml`: Exposes the pod inside the cluster.
 - `ingress.yaml`: Routes public HTTP traffic to the service.
@@ -255,4 +273,4 @@ kubectl -n dragon rollout status deployment/dragonqr
 kubectl -n dragon get pods,svc,ingress
 ```
 
-The Kubernetes deployment uses `replicas: 1` because player state is stored in one JSON file on a single persistent volume.
+The Kubernetes deployment keeps `replicas: 1`. Player progress now persists in CockroachDB independently of the pod; the retained legacy data volume is still mounted with `ReadWriteOnce`.
